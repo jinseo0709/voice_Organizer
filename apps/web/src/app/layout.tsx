@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -15,11 +15,18 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// viewport 별도 export 추가
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: "#3b82f6",
+};
+
 export const metadata: Metadata = {
   title: "Voice Organizer",
   description: "AI-powered voice memo organizer with speech recognition and smart organization",
-  viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no",
-  themeColor: "#3b82f6",
   manifest: "/manifest.json",
   keywords: ["voice memo", "speech recognition", "AI organizer", "음성 메모", "음성 인식"],
   authors: [{ name: "Voice Organizer Team" }],
