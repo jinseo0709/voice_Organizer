@@ -16,8 +16,8 @@ const initializeFirebaseAdmin = () => {
       const serviceAccount = JSON.parse(process.env.GOOGLE_CLOUD_CREDENTIALS);
       initializeApp({
         credential: cert(serviceAccount),
-        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'voice-organizer-app',
-        storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || 'voice-organizer-app.firebasestorage.app'
+        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'voice-organizer-480015',
+        storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || 'voice-organizer-480015.firebasestorage.app'
       });
       console.log('✅ Firebase Admin initialized from environment variables');
     } else {
@@ -30,8 +30,8 @@ const initializeFirebaseAdmin = () => {
         const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
         initializeApp({
           credential: cert(serviceAccount),
-          projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'voice-organizer-app',
-          storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || 'voice-organizer-app.firebasestorage.app'
+          projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'voice-organizer-480015',
+          storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || 'voice-organizer-480015.firebasestorage.app'
         });
         console.log('✅ Firebase Admin initialized from service account file');
       } else {

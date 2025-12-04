@@ -28,6 +28,10 @@ export const metadata: Metadata = {
   title: "Voice Organizer",
   description: "AI-powered voice memo organizer with speech recognition and smart organization",
   manifest: "/manifest.json",
+  other: {
+    "mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-status-bar-style": "default",
+  },
   keywords: ["voice memo", "speech recognition", "AI organizer", "음성 메모", "음성 인식"],
   authors: [{ name: "Voice Organizer Team" }],
   robots: "index, follow",

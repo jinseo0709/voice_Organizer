@@ -199,7 +199,7 @@ export class SpeechToTextService {
           const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
           initializeApp({
             credential: cert(serviceAccount),
-            storageBucket: 'voice-organizer-app.firebasestorage.app'
+            storageBucket: 'voice-organizer-480015.firebasestorage.app'
           });
         }
       }
@@ -214,7 +214,7 @@ export class SpeechToTextService {
         },
       });
       
-      const gcsUri = `gs://voice-organizer-app.firebasestorage.app/temp-audio/${tempFileName}`;
+      const gcsUri = `gs://voice-organizer-480015.firebasestorage.app/temp-audio/${tempFileName}`;
       console.log('📡 Audio uploaded to:', gcsUri);
       
       const {

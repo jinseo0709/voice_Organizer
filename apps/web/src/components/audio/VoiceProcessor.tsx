@@ -150,7 +150,7 @@ export function VoiceProcessor({ onProcessingComplete, onError }: VoiceProcessor
       }));
       
       console.log('📡 Calling Speech-to-Text API via proxy...', {
-        audioFileName: audioBlob.name || 'unnamed',
+        audioFileName: 'audio-file',
         audioSize: audioBlob.size,
         audioType: audioBlob.type
       });
