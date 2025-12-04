@@ -1,0 +1,22 @@
+[
+  {
+    "origin": [
+      "http://localhost:3000", 
+      "https://voice-organizer-app.web.app",
+      "https://voice-organizer-app.firebaseapp.com",
+      "https://voice-organizer-server-wg6wrsamfq-du.a.run.app",
+      "*"
+    ],
+    "method": ["GET", "PUT", "POST", "DELETE", "HEAD", "OPTIONS"],
+    "responseHeader": [
+      "Content-Type", 
+      "Authorization",
+      "x-goog-meta-custom-header", 
+      "Access-Control-Allow-Origin", 
+      "Access-Control-Allow-Headers",
+      "Access-Control-Allow-Methods",
+      "Access-Control-Allow-Credentials"
+    ],
+    "maxAgeSeconds": 86400
+  }
+]

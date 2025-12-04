@@ -1,0 +1,91 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidHealthData() {
+      return request.resource.data.keys().hasAll(['type', 'value', 'timestamp']) &&
+             request.resource.data.type in ['heartRate', 'steps', 'sleep', 'mood'];
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if false; // 삭제 금지
+    }
+
+    // VoiceMemos 컬렉션 - 기존 Voice Organizer 기능 유지
+    match /voiceMemos/{memoId} {
+      allow read, write: if request.auth != null && 
+        (resource == null || resource.data.userId == request.auth.uid);
+      allow create: if request.auth != null && 
+        request.resource.data.userId == request.auth.uid;
+    }
+
+    // Health data collection
+    match /healthData/{dataId} {
+      allow read: if isAuthenticated() &&
+        (isOwner(resource.data.userId) ||
+         request.auth.token.role == 'admin');
+      allow create: if isAuthenticated() &&
+        isOwner(request.resource.data.userId) &&
+        isValidHealthData();
+      allow update: if isOwner(resource.data.userId);
+      allow delete: if isOwner(resource.data.userId);
+    }
+
+    // AI Analysis collection (읽기 전용)
+    match /aiAnalysis/{analysisId} {
+      allow read: if isAuthenticated() &&
+        isOwner(resource.data.userId);
+      allow write: if false; // Functions만 쓰기 가능
+    }
+
+    // Conversations collection
+    match /conversations/{conversationId} {
+      allow read, write: if isOwner(resource.data.userId);
+    }
+
+    // Categories 컬렉션 - 기존 기능 유지
+    match /categories/{categoryId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         resource.data.isDefault == false);
+      allow create: if request.auth != null;
+    }
+
+    // Settings 컬렉션 - 기존 기능 유지
+    match /settings/{settingId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // UserSettings 컬렉션 - 기존 기능 유지
+    match /userSettings/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // 공용 설정 (읽기 전용)
+    match /config/{document} {
+      allow read: if true;
+      allow write: if false;
+    }
+    
+    // 기본적으로 모든 접근 차단
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
