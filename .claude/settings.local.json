@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(firebase hosting:channel:list:*)",
+      "Bash(firebase projects:list:*)",
+      "Bash(curl:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(gcloud run services describe:*)",
+      "Bash(git remote remove:*)",
+      "Bash(git remote add:*)",
+      "Bash(git push:*)",
+      "Bash(git pull:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run build:*)",
+      "Bash(npx turbo run build)",
+      "Bash(npm run dev:*)",
+      "Bash(taskkill //F //PID 36068)",
+      "Bash(npm test:*)",
+      "Bash(rm:*)",
+      "Bash(taskkill:*)",
+      "Bash(gcloud projects add-iam-policy-binding:*)",
+      "Bash(gcloud auth list:*)",
+      "Bash(gcloud auth login:*)",
+      "Bash(gcloud config set:*)",
+      "Bash(gcloud projects get-iam-policy:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

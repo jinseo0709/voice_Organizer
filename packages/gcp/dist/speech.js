@@ -126,7 +126,7 @@ class SpeechToTextService {
                     const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
                     initializeApp({
                         credential: cert(serviceAccount),
-                        storageBucket: 'voice-organizer-app.firebasestorage.app'
+                        storageBucket: 'voice-organizer-480015.firebasestorage.app'
                     });
                 }
             }
@@ -138,7 +138,7 @@ class SpeechToTextService {
                     contentType: this.getMimeType(options.encoding || 'WEBM_OPUS'),
                 },
             });
-            const gcsUri = `gs://voice-organizer-app.firebasestorage.app/temp-audio/${tempFileName}`;
+            const gcsUri = `gs://voice-organizer-480015.firebasestorage.app/temp-audio/${tempFileName}`;
             console.log('📡 Audio uploaded to:', gcsUri);
             const { languageCode = 'ko-KR', sampleRateHertz = 16000, encoding = 'WEBM_OPUS', enableAutomaticPunctuation = true, enableWordTimeOffsets = false, maxAlternatives = 1, profanityFilter = false, model = 'latest_long' } = options;
             // GCP Speech-to-Text 최적화된 설정
