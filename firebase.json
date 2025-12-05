@@ -7,7 +7,7 @@
     "rules": "storage.rules"
   },
   "hosting": {
-    "public": "apps/web/.next/standalone/apps/web",
+    "public": "apps/web/out",
     "ignore": [
       "firebase.json",
       "**/.*",

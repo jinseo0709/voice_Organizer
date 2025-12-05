@@ -1,6 +1,14 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Firebase Hosting을 위한 정적 export
+  output: 'export',
+
+  // 정적 export에서는 이미지 최적화 비활성화
+  images: {
+    unoptimized: true,
+  },
+
   // PWA 설정
   experimental: {
     // 필요한 실험적 기능들
@@ -59,10 +67,6 @@ const nextConfig: NextConfig = {
     ];
   },
   
-  // 이미지 최적화
-  images: {
-    formats: ['image/webp', 'image/avif'],
-  },
   
   // 성능 최적화
   compress: true,

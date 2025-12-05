@@ -29,7 +29,9 @@
       "Bash(gsutil ls:*)",
       "Bash(gcloud storage buckets list:*)",
       "Bash(gcloud storage buckets add-iam-policy-binding:*)",
-      "Bash(gcloud run deploy:*)"
+      "Bash(gcloud run deploy:*)",
+      "Bash(npx turbo run build:*)",
+      "Bash(firebase deploy:*)"
     ],
     "deny": [],
     "ask": []

@@ -4,11 +4,26 @@ const cors = require('cors');
 const multer = require('multer');
 const { SpeechClient } = require('@google-cloud/speech');
 const { Storage } = require('@google-cloud/storage');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 const admin = require('firebase-admin');
 const ffmpeg = require('fluent-ffmpeg');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+
+// Gemini AI 초기화
+let genAI;
+try {
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY;
+  if (apiKey) {
+    genAI = new GoogleGenerativeAI(apiKey);
+    console.log('✅ Gemini AI 초기화 완료');
+  } else {
+    console.warn('⚠️  GEMINI_API_KEY 환경 변수가 설정되지 않았습니다.');
+  }
+} catch (error) {
+  console.error('❌ Gemini AI 초기화 실패:', error);
+}
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -22,12 +37,14 @@ if (!process.env.FIREBASE_PROJECT_ID) {
 }
 
 // CORS 설정 - 환경 변수에서 허용 도메인 로드 (모든 클라이언트 허용)
-const allowedOrigins = process.env.ALLOWED_ORIGINS 
+const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',')
   : [
       'http://localhost:3000',
       'https://voice-organizer-app.web.app',
       'https://voice-organizer-app.firebaseapp.com',
+      'https://voice-organizer-480015.web.app',
+      'https://voice-organizer-480015.firebaseapp.com',
       '*' // 모든 도메인 허용
     ];
 
@@ -473,6 +490,121 @@ function parseRecognitionResult(response) {
     }))
   };
 }
+
+// Gemini AI 텍스트 분석 엔드포인트
+app.post('/api/gemini-analysis', async (req, res) => {
+  try {
+    console.log('🤖 Gemini AI 분석 요청 시작...');
+
+    const { text, options = {} } = req.body;
+
+    if (!text) {
+      return res.status(400).json({
+        success: false,
+        error: '분석할 텍스트가 필요합니다.'
+      });
+    }
+
+    if (!genAI) {
+      return res.status(500).json({
+        success: false,
+        error: 'Gemini AI가 초기화되지 않았습니다.'
+      });
+    }
+
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+
+    const prompt = `
+다음 텍스트를 분석하여 JSON 형식으로 응답해주세요:
+
+텍스트: "${text}"
+
+다음 형식으로 응답해주세요 (JSON만 반환):
+{
+  "category": "카테고리 (쇼핑리스트, 투두리스트, 약속 일정, 학교 수업 과제 일정, 아이디어, 일기/감정, 업무 메모, 기타 중 하나)",
+  "confidence": 0.0-1.0 사이의 신뢰도,
+  "summary": "핵심 내용 요약 (50자 이내)",
+  "keywords": ["키워드1", "키워드2", "키워드3"],
+  "sentiment": {
+    "score": -1.0에서 1.0 사이 (부정적 ~ 긍정적),
+    "magnitude": 0.0에서 1.0 사이 (감정 강도)
+  },
+  "entities": [
+    {"name": "엔티티명", "type": "타입", "salience": 0.0-1.0}
+  ]
+}
+`;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const responseText = response.text();
+
+    // JSON 파싱 (마크다운 코드 블록 제거)
+    let jsonStr = responseText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    const analysisResult = JSON.parse(jsonStr);
+
+    console.log('✅ Gemini AI 분석 완료:', {
+      category: analysisResult.category,
+      confidence: analysisResult.confidence
+    });
+
+    res.json({
+      success: true,
+      result: analysisResult
+    });
+
+  } catch (error) {
+    console.error('❌ Gemini AI 분석 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Gemini AI 분석 중 오류가 발생했습니다.'
+    });
+  }
+});
+
+// 텍스트 분석 엔드포인트 (간단 분석)
+app.post('/api/text-analysis', async (req, res) => {
+  try {
+    console.log('📝 텍스트 분석 요청 시작...');
+
+    const { text, options = {} } = req.body;
+
+    if (!text) {
+      return res.status(400).json({
+        success: false,
+        error: '분석할 텍스트가 필요합니다.'
+      });
+    }
+
+    // 간단한 텍스트 분석 (키워드 추출, 문장 분리 등)
+    const sentences = text.split(/[.!?]/).filter(s => s.trim().length > 5);
+    const words = text.split(/\s+/);
+    const keywords = words
+      .filter(w => w.length > 2)
+      .slice(0, 10);
+
+    const result = {
+      summary: sentences.slice(0, 2).join('. ') + '.',
+      keywords,
+      sentenceCount: sentences.length,
+      wordCount: words.length
+    };
+
+    console.log('✅ 텍스트 분석 완료');
+
+    res.json({
+      success: true,
+      result
+    });
+
+  } catch (error) {
+    console.error('❌ 텍스트 분석 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || '텍스트 분석 중 오류가 발생했습니다.'
+    });
+  }
+});
 
 // 에러 핸들링
 app.use((error, req, res, next) => {

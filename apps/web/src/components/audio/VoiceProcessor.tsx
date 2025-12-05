@@ -14,6 +14,9 @@ import { UploadResult } from '@voice-organizer/firebase';
 // Firebase 초기화 강제 실행
 import '@/lib/firebase';
 
+// Cloud Run API 서버 URL (정적 export에서는 환경 변수 사용 불가하므로 직접 설정)
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://voice-organizer-server-565683939264.asia-northeast1.run.app';
+
 // 처리 단계 정의
 export type ProcessingStep = 
   | 'upload' 
@@ -155,8 +158,8 @@ export function VoiceProcessor({ onProcessingComplete, onError }: VoiceProcessor
         audioType: audioBlob.type
       });
       
-      // 로컬 API 라우트를 통해 Cloud Run 서버로 프록시
-      const apiResponse = await fetch('/api/speech-to-text', {
+      // Cloud Run 서버로 직접 API 호출
+      const apiResponse = await fetch(`${API_BASE_URL}/api/speech-to-text`, {
         method: 'POST',
         body: formData,
         // 타임아웃 설정은 브라우저에서 자동 처리됨
@@ -204,13 +207,13 @@ export function VoiceProcessor({ onProcessingComplete, onError }: VoiceProcessor
     try {
       console.log('🤖 Starting Gemini AI text analysis via server API...');
       
-      // 서버 API를 통한 Gemini AI 분석
-      const response = await fetch('/api/gemini-analysis', {
+      // Cloud Run 서버를 통한 Gemini AI 분석
+      const response = await fetch(`${API_BASE_URL}/api/gemini-analysis`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           text,
           options: {
             enableSentiment: true,
@@ -378,9 +381,9 @@ export function VoiceProcessor({ onProcessingComplete, onError }: VoiceProcessor
         return `📝 ${category} 요약:\n${sentences.slice(0, 2).join('. ')}.`;
       }
       
-      // 서버 API를 통한 실제 GCP 서비스 호출
+      // Cloud Run 서버를 통한 실제 GCP 서비스 호출
       console.log('📡 Calling server text analysis API...');
-      const response = await fetch('/api/text-analysis', {
+      const response = await fetch(`${API_BASE_URL}/api/text-analysis`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -404,9 +407,33 @@ export function VoiceProcessor({ onProcessingComplete, onError }: VoiceProcessor
   const saveVoiceProcessingResult = async (data: Partial<VoiceProcessingResult>): Promise<VoiceProcessingResult> => {
     try {
       const { firestoreService } = await import('@voice-organizer/firebase');
-      
+
+      console.log('💾 Saving voice memo to Firestore...');
+
+      // CreateVoiceMemo 타입에 맞게 데이터 구성
+      const createMemoData = {
+        userId: user!.id,
+        audioUrl: data.audioUrl || '',
+        duration: 0, // 오디오 길이는 추후 계산 가능
+        title: data.summary?.substring(0, 50) || '음성 메모',
+        transcription: data.originalText || '',
+        summary: data.summary || '',
+        tags: data.keywords || [],
+        category: data.category || '기타',
+        // 확장 필드 (Firestore는 유연하게 저장 가능)
+        categoryConfidence: data.categoryConfidence || 0.5,
+        entities: data.entities || [],
+        sentiment: data.sentiment || { score: 0, magnitude: 0 },
+        processingTime: data.processingTime || 0,
+      };
+
+      // Firestore에 저장 (createMemo 메서드 사용)
+      const docId = await firestoreService.createMemo(createMemoData);
+
+      console.log('✅ Voice memo saved to Firestore:', docId);
+
       const voiceResult: VoiceProcessingResult = {
-        id: `voice_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        id: docId,
         originalText: data.originalText || '',
         category: data.category || '기타',
         categoryConfidence: data.categoryConfidence || 0.5,
@@ -418,16 +445,13 @@ export function VoiceProcessor({ onProcessingComplete, onError }: VoiceProcessor
         processingTime: data.processingTime || 0,
         createdAt: new Date()
       };
-      
-      // Firestore에 저장
-      await firestoreService.create(`users/${user!.id}/voiceMemos`, voiceResult);
-      
+
       return voiceResult;
     } catch (error) {
-      console.error('Firestore 저장 실패:', error);
-      // 저장 실패해도 결과는 반환
+      console.error('❌ Firestore 저장 실패:', error);
+      // 저장 실패해도 결과는 반환 (임시 ID 사용)
       return {
-        id: `voice_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         originalText: data.originalText || '',
         category: data.category || '기타',
         categoryConfidence: data.categoryConfidence || 0.5,
