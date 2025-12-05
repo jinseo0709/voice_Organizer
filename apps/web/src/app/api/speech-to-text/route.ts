@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 // Cloud Run 서버로 프록시하는 API 엔드포인트
-const CLOUD_RUN_URL = 'https://voice-organizer-server-wg6wrsamfq-du.a.run.app';
+const CLOUD_RUN_URL = 'https://voice-organizer-server-565683939264.asia-northeast1.run.app';
 
 export async function POST(request: NextRequest) {
   try {

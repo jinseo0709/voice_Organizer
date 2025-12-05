@@ -23,7 +23,13 @@
       "Bash(gcloud auth list:*)",
       "Bash(gcloud auth login:*)",
       "Bash(gcloud config set:*)",
-      "Bash(gcloud projects get-iam-policy:*)"
+      "Bash(gcloud projects get-iam-policy:*)",
+      "Bash(gcloud run services list:*)",
+      "Bash(gcloud run services:*)",
+      "Bash(gsutil ls:*)",
+      "Bash(gcloud storage buckets list:*)",
+      "Bash(gcloud storage buckets add-iam-policy-binding:*)",
+      "Bash(gcloud run deploy:*)"
     ],
     "deny": [],
     "ask": []

@@ -4,6 +4,9 @@ FROM node:20-slim
 # Set the working directory
 WORKDIR /app
 
+# Install FFmpeg for audio format conversion
+RUN apt-get update && apt-get install -y ffmpeg curl && rm -rf /var/lib/apt/lists/*
+
 # Install dependencies
 COPY package.json package-lock.json ./
 RUN npm install --production

@@ -5,6 +5,10 @@ const multer = require('multer');
 const { SpeechClient } = require('@google-cloud/speech');
 const { Storage } = require('@google-cloud/storage');
 const admin = require('firebase-admin');
+const ffmpeg = require('fluent-ffmpeg');
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -72,8 +76,8 @@ try {
 try {
   if (!admin.apps.length) {
     const firebaseConfig = {
-      projectId: process.env.FIREBASE_PROJECT_ID || 'voice-organizer-app',
-      storageBucket: process.env.FIREBASE_STORAGE_BUCKET || 'voice-organizer-app.firebasestorage.app'
+      projectId: process.env.FIREBASE_PROJECT_ID || 'voice-organizer-480015',
+      storageBucket: process.env.FIREBASE_STORAGE_BUCKET || 'voice-organizer-480015.firebasestorage.app'
     };
     
     // 서비스 계정 키가 설정된 경우 credential 추가
@@ -121,7 +125,7 @@ app.post('/api/speech-to-text', upload.single('audio'), async (req, res) => {
 
     // 파일 크기 기반 메소드 선택 (환경 변수에서 임계값 로드)
     const audioSizeKB = audioBuffer.length / 1024;
-    const thresholdKB = parseInt(process.env.AUDIO_SIZE_THRESHOLD_KB) || 300;
+    const thresholdKB = parseInt(process.env.AUDIO_SIZE_THRESHOLD_KB) || 500;
     const isLongAudio = audioSizeKB > thresholdKB;
     
     console.log(`🔀 ${isLongAudio ? 'LongRunningRecognize' : 'Recognize'} 방식 사용 (${audioSizeKB.toFixed(0)}KB)`);
@@ -152,62 +156,265 @@ app.post('/api/speech-to-text', upload.single('audio'), async (req, res) => {
   }
 });
 
-// 짧은 오디오 처리 (300KB 미만)
+// 오디오 형식 감지
+function detectAudioFormat(buffer) {
+  const header = buffer.slice(0, 12).toString('hex');
+  const headerStr = buffer.slice(0, 12).toString('ascii');
+
+  console.log('🔍 오디오 헤더 분석:', { hex: header, ascii: headerStr });
+
+  // WebM 형식: 1A 45 DF A3 (EBML header)
+  if (header.startsWith('1a45dfa3')) {
+    return 'WEBM_OPUS';
+  }
+
+  // OGG 형식: OggS
+  if (headerStr.startsWith('OggS')) {
+    return 'OGG_OPUS';
+  }
+
+  // M4A/MP4 형식: ftyp (FFmpeg 변환 필요)
+  if (header.includes('66747970') || headerStr.includes('ftyp')) {
+    return 'M4A'; // M4A는 별도 변환 필요
+  }
+
+  // WAV 형식: RIFF
+  if (headerStr.startsWith('RIFF')) {
+    return 'LINEAR16';
+  }
+
+  // MP3 형식: ID3 또는 FF FB
+  if (headerStr.startsWith('ID3') || header.startsWith('fffb') || header.startsWith('fff3')) {
+    return 'MP3';
+  }
+
+  // FLAC 형식: fLaC
+  if (headerStr.startsWith('fLaC')) {
+    return 'FLAC';
+  }
+
+  return null; // 알 수 없는 형식
+}
+
+// M4A를 WAV로 변환 (FFmpeg 사용)
+async function convertM4AtoWAV(inputBuffer) {
+  return new Promise((resolve, reject) => {
+    const tempDir = os.tmpdir();
+    const inputPath = path.join(tempDir, `input-${Date.now()}.m4a`);
+    const outputPath = path.join(tempDir, `output-${Date.now()}.wav`);
+
+    console.log('🔄 M4A → WAV 변환 시작...');
+    console.log('📁 임시 파일:', { inputPath, outputPath });
+
+    // 입력 파일 저장
+    fs.writeFileSync(inputPath, inputBuffer);
+
+    ffmpeg(inputPath)
+      .toFormat('wav')
+      .audioCodec('pcm_s16le')
+      .audioChannels(1)
+      .audioFrequency(16000)
+      .on('start', (commandLine) => {
+        console.log('🎬 FFmpeg 명령:', commandLine);
+      })
+      .on('progress', (progress) => {
+        console.log('⏳ 변환 진행중:', progress.percent ? `${progress.percent.toFixed(1)}%` : 'processing...');
+      })
+      .on('end', () => {
+        console.log('✅ M4A → WAV 변환 완료');
+
+        // 출력 파일 읽기
+        const outputBuffer = fs.readFileSync(outputPath);
+
+        // 임시 파일 정리
+        try {
+          fs.unlinkSync(inputPath);
+          fs.unlinkSync(outputPath);
+          console.log('🗑️ 임시 파일 정리 완료');
+        } catch (cleanupError) {
+          console.warn('⚠️ 임시 파일 정리 실패:', cleanupError.message);
+        }
+
+        resolve(outputBuffer);
+      })
+      .on('error', (err) => {
+        console.error('❌ FFmpeg 변환 오류:', err.message);
+
+        // 임시 파일 정리
+        try {
+          if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+          if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+        } catch (cleanupError) {
+          console.warn('⚠️ 임시 파일 정리 실패:', cleanupError.message);
+        }
+
+        reject(new Error(`오디오 변환 실패: ${err.message}`));
+      })
+      .save(outputPath);
+  });
+}
+
+// 짧은 오디오 처리 (500KB 미만)
 async function transcribeShortAudio(audioBuffer, options = {}) {
   const {
     languageCode = process.env.SPEECH_API_LANGUAGE || 'ko-KR',
-    encoding = 'WEBM_OPUS',
     enableAutomaticPunctuation = true,
-    model = process.env.SPEECH_API_MODEL_SHORT || 'latest_short'
+    model = 'default'
   } = options;
 
-  const request = {
-    config: {
-      encoding: encoding,
-      languageCode: languageCode,
-      enableAutomaticPunctuation: enableAutomaticPunctuation,
-      model: model,
-      audioChannelCount: 1,
-      useEnhanced: true,
-    },
-    audio: {
-      content: audioBuffer.toString('base64'),
-    },
-  };
+  // 오디오 형식 감지
+  const detectedFormat = detectAudioFormat(audioBuffer);
+  console.log('🎵 감지된 오디오 형식:', detectedFormat);
 
-  console.log('📡 GCP Speech-to-Text (SHORT) API 호출...');
-  const [response] = await speechClient.recognize(request);
-  
-  return parseRecognitionResult(response);
+  // M4A 형식이면 WAV로 변환
+  let processedBuffer = audioBuffer;
+  let finalEncoding = detectedFormat;
+
+  if (detectedFormat === 'M4A') {
+    console.log('🔄 M4A 형식 감지 - WAV로 변환 필요');
+    try {
+      processedBuffer = await convertM4AtoWAV(audioBuffer);
+      finalEncoding = 'LINEAR16';
+      console.log('✅ WAV 변환 완료, 버퍼 크기:', processedBuffer.length);
+    } catch (convertError) {
+      console.error('❌ M4A 변환 실패:', convertError.message);
+      throw new Error(`M4A 파일 변환 실패: ${convertError.message}`);
+    }
+  }
+
+  const audioContent = processedBuffer.toString('base64');
+
+  // 감지된 형식에 따라 인코딩 설정
+  let encodingConfigs;
+
+  if (finalEncoding === 'LINEAR16') {
+    // 변환된 WAV 또는 원본 WAV
+    encodingConfigs = [
+      { encoding: 'LINEAR16', sampleRateHertz: 16000 },
+    ];
+  } else if (finalEncoding === 'MP3') {
+    encodingConfigs = [
+      { encoding: 'MP3', sampleRateHertz: 48000 },
+      { encoding: 'MP3', sampleRateHertz: 44100 },
+      { encoding: 'MP3', sampleRateHertz: 16000 },
+    ];
+  } else if (finalEncoding === 'FLAC') {
+    encodingConfigs = [
+      { encoding: 'FLAC', sampleRateHertz: 48000 },
+      { encoding: 'FLAC', sampleRateHertz: 44100 },
+      { encoding: 'FLAC', sampleRateHertz: 16000 },
+    ];
+  } else {
+    // WebM 또는 OGG (기본값)
+    encodingConfigs = [
+      { encoding: 'WEBM_OPUS', sampleRateHertz: 48000 },
+      { encoding: 'OGG_OPUS', sampleRateHertz: 48000 },
+    ];
+  }
+
+  let lastError = null;
+
+  for (const config of encodingConfigs) {
+    const request = {
+      config: {
+        encoding: config.encoding,
+        sampleRateHertz: config.sampleRateHertz,
+        languageCode: languageCode,
+        enableAutomaticPunctuation: enableAutomaticPunctuation,
+        model: model,
+        audioChannelCount: 1,
+      },
+      audio: {
+        content: audioContent,
+      },
+    };
+
+    console.log(`📡 GCP Speech-to-Text 호출 시도: ${config.encoding} @ ${config.sampleRateHertz}Hz`);
+
+    try {
+      const [response] = await speechClient.recognize(request);
+
+      // 결과가 있는지 확인
+      if (response && response.results && response.results.length > 0) {
+        console.log(`✅ 성공: ${config.encoding} @ ${config.sampleRateHertz}Hz`);
+        console.log('📥 GCP 응답:', JSON.stringify(response, null, 2));
+        return parseRecognitionResult(response);
+      } else {
+        console.log(`⚠️ ${config.encoding} @ ${config.sampleRateHertz}Hz: 결과 없음, 다음 시도...`);
+        lastError = new Error('음성 인식 결과가 없습니다.');
+      }
+    } catch (error) {
+      console.error(`❌ ${config.encoding} @ ${config.sampleRateHertz}Hz 실패:`, error.message);
+      lastError = error;
+    }
+  }
+
+  // 모든 시도 실패
+  throw lastError || new Error('모든 인코딩 시도가 실패했습니다.');
 }
 
-// 긴 오디오 처리 (300KB 이상) - Firebase Storage 사용
+// 긴 오디오 처리 (500KB 이상) - Firebase Storage 사용
 async function transcribeLongAudio(audioBuffer, options = {}) {
   const {
     languageCode = process.env.SPEECH_API_LANGUAGE || 'ko-KR',
-    encoding = 'WEBM_OPUS',
     enableAutomaticPunctuation = true,
     model = process.env.SPEECH_API_MODEL_LONG || 'latest_long'
   } = options;
 
+  // 오디오 형식 감지 및 M4A 변환
+  const detectedFormat = detectAudioFormat(audioBuffer);
+  console.log('🎵 감지된 오디오 형식 (Long):', detectedFormat);
+
+  let processedBuffer = audioBuffer;
+  let finalEncoding = 'WEBM_OPUS';
+  let sampleRateHertz = 48000;
+  let contentType = 'audio/webm';
+  let fileExtension = 'webm';
+
+  if (detectedFormat === 'M4A') {
+    console.log('🔄 M4A 형식 감지 (Long) - WAV로 변환 필요');
+    try {
+      processedBuffer = await convertM4AtoWAV(audioBuffer);
+      finalEncoding = 'LINEAR16';
+      sampleRateHertz = 16000;
+      contentType = 'audio/wav';
+      fileExtension = 'wav';
+      console.log('✅ WAV 변환 완료 (Long), 버퍼 크기:', processedBuffer.length);
+    } catch (convertError) {
+      console.error('❌ M4A 변환 실패 (Long):', convertError.message);
+      throw new Error(`M4A 파일 변환 실패: ${convertError.message}`);
+    }
+  } else if (detectedFormat === 'LINEAR16') {
+    finalEncoding = 'LINEAR16';
+    sampleRateHertz = 16000;
+    contentType = 'audio/wav';
+    fileExtension = 'wav';
+  } else if (detectedFormat === 'MP3') {
+    finalEncoding = 'MP3';
+    sampleRateHertz = 44100;
+    contentType = 'audio/mpeg';
+    fileExtension = 'mp3';
+  }
+
   // Firebase Storage에 임시 파일 업로드
-  const tempFileName = `temp-audio-${Date.now()}.webm`;
+  const tempFileName = `temp-audio-${Date.now()}.${fileExtension}`;
   const bucket = admin.storage().bucket();
   const file = bucket.file(`temp-audio/${tempFileName}`);
 
   console.log('📁 Firebase Storage에 오디오 업로드 중...');
-  await file.save(audioBuffer, {
+  await file.save(processedBuffer, {
     metadata: {
-      contentType: 'audio/webm',
+      contentType: contentType,
     },
   });
 
-  const gcsUri = `gs://voice-organizer-app.firebasestorage.app/temp-audio/${tempFileName}`;
+  const gcsUri = `gs://voice-organizer-480015.firebasestorage.app/temp-audio/${tempFileName}`;
   console.log('📡 업로드 완료:', gcsUri);
 
   const request = {
     config: {
-      encoding: encoding,
+      encoding: finalEncoding,
+      sampleRateHertz: sampleRateHertz,
       languageCode: languageCode,
       enableAutomaticPunctuation: enableAutomaticPunctuation,
       model: model,
