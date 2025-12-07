@@ -242,6 +242,22 @@ button:focus-visible,
   animation: pulse-notification 2s infinite;
 }
 
+/* 슬라이드 인 (오른쪽에서) 애니메이션 */
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0.8;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s ease-out;
+}
+
 /* ========================================
    Voice Waveform 애니메이션 - 헤더 전체 배경용
    ======================================== */

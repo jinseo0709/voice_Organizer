@@ -29,7 +29,12 @@ import {
   RefreshCw,
   LogOut,
   User as UserIcon,
-  CheckCircle
+  CheckCircle,
+  X,
+  Play,
+  Pause,
+  Clock,
+  FileAudio
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';
@@ -56,6 +61,11 @@ export default function VoiceOrganizerApp() {
   const [showCompletedOnly, setShowCompletedOnly] = useState<boolean>(false);
   const [checkedItems, setCheckedItems] = useState<CheckedItemsState>({});
   const [cartItems, setCartItems] = useState<CartItemsState>({});
+  const [showMemoPanel, setShowMemoPanel] = useState<boolean>(false);
+  
+  // 메모 패널 오디오 재생 상태
+  const [panelPlayingId, setPanelPlayingId] = useState<string | null>(null);
+  const [panelAudio, setPanelAudio] = useState<HTMLAudioElement | null>(null);
 
   // Firestore에서 메모 목록 불러오기
   const loadMemos = useCallback(async () => {
@@ -144,6 +154,49 @@ export default function VoiceOrganizerApp() {
     } catch (error) {
       console.error('Sign out failed:', error);
     }
+  };
+
+  // 메모 패널 재생/일시정지 토글
+  const handlePanelPlayPause = (memo: VoiceMemo) => {
+    if (!memo.audioUrl) return;
+
+    // 같은 메모를 클릭한 경우 - 일시정지/재생 토글
+    if (panelPlayingId === memo.id && panelAudio) {
+      if (panelAudio.paused) {
+        panelAudio.play();
+      } else {
+        panelAudio.pause();
+      }
+      return;
+    }
+
+    // 다른 메모를 클릭한 경우 - 기존 오디오 정지 후 새로 재생
+    if (panelAudio) {
+      panelAudio.pause();
+      panelAudio.currentTime = 0;
+    }
+
+    const newAudio = new Audio(memo.audioUrl);
+    newAudio.play();
+    setPanelAudio(newAudio);
+    setPanelPlayingId(memo.id);
+
+    // 재생 완료 시 상태 초기화
+    newAudio.onended = () => {
+      setPanelPlayingId(null);
+      setPanelAudio(null);
+    };
+  };
+
+  // 패널 닫을 때 오디오 정지
+  const handleCloseMemoPanel = () => {
+    if (panelAudio) {
+      panelAudio.pause();
+      panelAudio.currentTime = 0;
+    }
+    setPanelPlayingId(null);
+    setPanelAudio(null);
+    setShowMemoPanel(false);
   };
 
   // 결과 필터링
@@ -387,11 +440,11 @@ export default function VoiceOrganizerApp() {
               <span>새 녹음</span>
             </button>
 
-            {/* 2순위: 메모 (전체) */}
+            {/* 2순위: 메모 (전체) - 클릭 시 패널 열기 */}
             <button
-              onClick={() => { setActiveTab('list'); setSelectedCategory('all'); }}
+              onClick={() => setShowMemoPanel(true)}
               className={`group flex items-center space-x-2 py-3 px-6 rounded-xl text-base font-medium transition-all duration-200 ${
-                activeTab === 'list' && selectedCategory === 'all'
+                showMemoPanel
                   ? 'bg-teal-600 text-white shadow-md'
                   : 'text-gray-500 hover:text-teal-600 hover:bg-teal-50'
               }`}
@@ -400,7 +453,7 @@ export default function VoiceOrganizerApp() {
               <span>메모</span>
               {memos.length > 0 && (
                 <span className={`ml-1 px-2.5 py-1 text-sm rounded-full transition-all duration-200 ${
-                  activeTab === 'list' && selectedCategory === 'all' ? 'bg-white/20 text-white' : 'bg-teal-50 text-teal-600'
+                  showMemoPanel ? 'bg-white/20 text-white' : 'bg-teal-50 text-teal-600'
                 }`}>
                   {memos.length}
                 </span>
@@ -656,6 +709,156 @@ export default function VoiceOrganizerApp() {
           </div>
         </div>
       </main>
+
+      {/* 메모 패널 (슬라이드 오버) */}
+      {showMemoPanel && (
+        <div className="fixed inset-0 z-[100] overflow-hidden">
+          {/* 배경 오버레이 */}
+          <div 
+            className="absolute inset-0 bg-black/30 backdrop-blur-sm transition-opacity"
+            onClick={handleCloseMemoPanel}
+          />
+          
+          {/* 패널 */}
+          <div className="absolute inset-y-0 right-0 max-w-2xl w-full bg-white shadow-2xl flex flex-col animate-slide-in-right">
+            {/* 패널 헤더 */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-teal-50 to-white">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-teal-100 rounded-xl flex items-center justify-center">
+                  <FileText className="h-5 w-5 text-teal-600 stroke-[1.5]" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-800">전체 메모</h2>
+                  <p className="text-sm text-gray-500 font-light">{memos.length}개의 녹음 파일</p>
+                </div>
+              </div>
+              <button
+                onClick={handleCloseMemoPanel}
+                className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+              >
+                <X className="h-5 w-5 text-gray-500 stroke-[1.5]" />
+              </button>
+            </div>
+
+            {/* 패널 내용 - 스크롤 가능 */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              {memos.length === 0 ? (
+                <div className="text-center py-16">
+                  <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <FileAudio className="h-10 w-10 text-gray-300 stroke-[1.5]" />
+                  </div>
+                  <p className="text-gray-500 font-light">저장된 메모가 없습니다</p>
+                  <p className="text-sm text-gray-400 mt-1">새 녹음을 시작해보세요!</p>
+                </div>
+              ) : (
+                memos.map((memo, index) => (
+                  <div 
+                    key={memo.id} 
+                    className="bg-white border border-gray-100 rounded-2xl p-5 hover:shadow-md hover:border-gray-200 transition-all duration-200"
+                  >
+                    {/* 메모 헤더 */}
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-teal-50 rounded-lg flex items-center justify-center text-sm font-semibold text-teal-600">
+                          {index + 1}
+                        </div>
+                        <div>
+                          <h3 className="font-medium text-gray-800">
+                            {memo.title || `음성 메모 #${memo.id.slice(0, 6)}`}
+                          </h3>
+                          <div className="flex items-center space-x-3 text-xs text-gray-400 mt-0.5">
+                            <span className="flex items-center">
+                              <Clock className="h-3 w-3 mr-1 stroke-[1.5]" />
+                              {format(memo.createdAt, 'yyyy.MM.dd HH:mm', { locale: ko })}
+                            </span>
+                            <span className="flex items-center">
+                              <FileAudio className="h-3 w-3 mr-1 stroke-[1.5]" />
+                              {Math.floor(memo.duration / 60)}:{String(Math.floor(memo.duration % 60)).padStart(2, '0')}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* 재생/일시정지 버튼 */}
+                      {memo.audioUrl && (
+                        <button
+                          onClick={() => handlePanelPlayPause(memo)}
+                          className={`p-2.5 rounded-xl transition-all duration-200 group ${
+                            panelPlayingId === memo.id 
+                              ? 'bg-teal-600 hover:bg-teal-700' 
+                              : 'bg-teal-50 hover:bg-teal-100'
+                          }`}
+                          title={panelPlayingId === memo.id ? '일시정지' : '재생'}
+                        >
+                          {panelPlayingId === memo.id ? (
+                            <Pause className="h-4 w-4 text-white stroke-[1.5]" />
+                          ) : (
+                            <Play className="h-4 w-4 text-teal-600 stroke-[1.5] group-hover:scale-110 transition-transform" />
+                          )}
+                        </button>
+                      )}
+                    </div>
+
+                    {/* 카테고리 태그 */}
+                    {memo.allCategories && memo.allCategories.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mb-3">
+                        {memo.allCategories.map((cat: { category: string }, i: number) => {
+                          const config = CATEGORY_CONFIG[cat.category as keyof typeof CATEGORY_CONFIG] || CATEGORY_CONFIG['기타'];
+                          return (
+                            <span 
+                              key={i}
+                              className={`px-2.5 py-1 text-xs rounded-full ${config.bg} ${config.color} font-medium`}
+                            >
+                              {cat.category}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* 전체 텍스트 (변환된 텍스트) */}
+                    {memo.transcription && (
+                      <div className="bg-gray-50 rounded-xl p-4 mb-3">
+                        <p className="text-xs font-medium text-gray-500 mb-2 flex items-center">
+                          <FileText className="h-3 w-3 mr-1.5 stroke-[1.5]" />
+                          원본 텍스트
+                        </p>
+                        <p className="text-sm text-gray-700 font-light leading-relaxed whitespace-pre-wrap">
+                          {memo.transcription}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* 요약 */}
+                    {memo.summary && (
+                      <div className="bg-teal-50/50 rounded-xl p-4">
+                        <p className="text-xs font-medium text-teal-600 mb-2">📝 AI 요약</p>
+                        <p className="text-sm text-gray-700 font-light leading-relaxed">
+                          {memo.summary}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* 패널 푸터 */}
+            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/50">
+              <button
+                onClick={() => {
+                  handleCloseMemoPanel();
+                  setActiveTab('list');
+                  setSelectedCategory('all');
+                }}
+                className="w-full py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-medium transition-colors"
+              >
+                카테고리별 상세 보기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 푸터 */}
       <footer className="bg-white border-t border-gray-100 mt-auto">
