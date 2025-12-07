@@ -239,8 +239,15 @@ export function VoiceProcessor({ onProcessingComplete, onError }: VoiceProcessor
       console.log('✅ Gemini AI analysis completed via server API:', {
         category: analysisResult.category,
         confidence: analysisResult.confidence,
-        keywordsCount: analysisResult.keywords?.length || 0
+        keywordsCount: analysisResult.keywords?.length || 0,
+        summaryListCount: analysisResult.summary_list?.length || 0,
+        allCategoriesCount: analysisResult.all_categories?.length || 0
       });
+      
+      // summary_list가 있으면 | 로 구분된 문자열로 변환
+      const summaryText = analysisResult.summary_list && analysisResult.summary_list.length > 0
+        ? analysisResult.summary_list.join(' | ')
+        : analysisResult.summary || '';
       
       return {
         sentiment: {
@@ -253,11 +260,14 @@ export function VoiceProcessor({ onProcessingComplete, onError }: VoiceProcessor
           confidence: analysisResult.confidence 
         }],
         keywords: analysisResult.keywords || [],
-        summary: analysisResult.summary,
+        summary: summaryText,
+        summaryList: analysisResult.summary_list || [],
+        allCategories: analysisResult.all_categories || [],
         geminiResult: {
           category: analysisResult.category,
           confidence: analysisResult.confidence,
-          summary: analysisResult.summary,
+          summary: summaryText,
+          summaryList: analysisResult.summary_list || [],
           keywords: analysisResult.keywords || []
         }
       };
@@ -270,6 +280,8 @@ export function VoiceProcessor({ onProcessingComplete, onError }: VoiceProcessor
         categories: [{ name: '기타', confidence: 0.5 }],
         keywords: text.split(' ').slice(0, 5),
         summary: text.length > 100 ? text.substring(0, 100) + '...' : text,
+        summaryList: [],
+        allCategories: [],
         geminiResult: null
       };
     }

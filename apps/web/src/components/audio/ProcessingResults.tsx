@@ -18,9 +18,11 @@ import {
   Eye,
   EyeOff,
   Copy,
-  CheckCircle
+  CheckCircle,
+  Calendar,
+  ExternalLink
 } from 'lucide-react';
-import { formatDistanceToNow, format } from 'date-fns';
+import { formatDistanceToNow, format, parse, isValid } from 'date-fns';
 import { ko } from 'date-fns/locale';
 
 interface ProcessingResultsProps {
@@ -46,6 +48,161 @@ const CATEGORY_COLORS = {
   '아이디어': 'bg-yellow-100 text-yellow-800 border-yellow-200',
   '기타': 'bg-gray-100 text-gray-800 border-gray-200'
 };
+
+// 🗓️ 약속 일정에서 날짜/시간 파싱 및 Google Calendar URL 생성
+function parseAppointmentForCalendar(text: string): { 
+  title: string; 
+  startDate: Date | null; 
+  endDate: Date | null;
+  location: string;
+  calendarUrl: string | null;
+} {
+  const now = new Date();
+  let startDate: Date | null = null;
+  let location = '';
+  let title = text;
+  
+  // 날짜 패턴 매칭
+  const datePatterns = [
+    // "2025년 12월 7일" 형식
+    /(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일/,
+    // "12월 7일" 형식 (현재 년도 기준)
+    /(\d{1,2})월\s*(\d{1,2})일/,
+    // "내일", "모레" 처리
+    /(내일|모레|오늘)/,
+    // "다음주 월요일" 등
+    /(다음주|이번주)\s*(월|화|수|목|금|토|일)요일/
+  ];
+  
+  // 시간 패턴 매칭
+  const timePatterns = [
+    // "오후 5시", "오전 10시" 형식
+    /(오전|오후)\s*(\d{1,2})시(?:\s*(\d{1,2})분)?/,
+    // "17:00", "17시" 형식
+    /(\d{1,2}):(\d{2})/,
+    /(\d{1,2})시(?:\s*(\d{1,2})분)?/
+  ];
+  
+  // 장소 패턴 매칭
+  const locationPatterns = [
+    /에서\s+(.+?)(?:에서|와|과|랑|이랑|하고|\s|$)/,
+    /(\S+(?:역|카페|식당|레스토랑|공원|센터|빌딩|아파트|동|구|로|길))\s*(?:에서|에)/,
+    /장소[:\s]*(.+?)(?:에서|$)/
+  ];
+  
+  // 날짜 추출
+  for (const pattern of datePatterns) {
+    const match = text.match(pattern);
+    if (match) {
+      if (match[0].includes('년')) {
+        // 2025년 12월 7일 형식
+        const year = parseInt(match[1]);
+        const month = parseInt(match[2]) - 1;
+        const day = parseInt(match[3]);
+        startDate = new Date(year, month, day);
+      } else if (match[0] === '내일') {
+        startDate = new Date(now);
+        startDate.setDate(startDate.getDate() + 1);
+      } else if (match[0] === '모레') {
+        startDate = new Date(now);
+        startDate.setDate(startDate.getDate() + 2);
+      } else if (match[0] === '오늘') {
+        startDate = new Date(now);
+      } else if (match[0].includes('월')) {
+        // 12월 7일 형식
+        const month = parseInt(match[1]) - 1;
+        const day = parseInt(match[2]);
+        startDate = new Date(now.getFullYear(), month, day);
+        // 지난 날짜면 내년으로
+        if (startDate < now) {
+          startDate.setFullYear(startDate.getFullYear() + 1);
+        }
+      }
+      break;
+    }
+  }
+  
+  // 시간 추출
+  if (startDate) {
+    for (const pattern of timePatterns) {
+      const match = text.match(pattern);
+      if (match) {
+        let hours = 0;
+        let minutes = 0;
+        
+        if (match[0].includes('오전') || match[0].includes('오후')) {
+          hours = parseInt(match[2]);
+          minutes = match[3] ? parseInt(match[3]) : 0;
+          if (match[1] === '오후' && hours !== 12) {
+            hours += 12;
+          } else if (match[1] === '오전' && hours === 12) {
+            hours = 0;
+          }
+        } else if (match[0].includes(':')) {
+          hours = parseInt(match[1]);
+          minutes = parseInt(match[2]);
+        } else {
+          hours = parseInt(match[1]);
+          minutes = match[2] ? parseInt(match[2]) : 0;
+        }
+        
+        startDate.setHours(hours, minutes, 0, 0);
+        break;
+      }
+    }
+  }
+  
+  // 장소 추출
+  for (const pattern of locationPatterns) {
+    const match = text.match(pattern);
+    if (match && match[1]) {
+      location = match[1].trim();
+      break;
+    }
+  }
+  
+  // 제목 정리 (날짜/시간 정보 제거 후 핵심 내용만)
+  title = text
+    .replace(/\d{4}년\s*\d{1,2}월\s*\d{1,2}일/g, '')
+    .replace(/\d{1,2}월\s*\d{1,2}일/g, '')
+    .replace(/(오전|오후)\s*\d{1,2}시(\s*\d{1,2}분)?/g, '')
+    .replace(/\d{1,2}:\d{2}/g, '')
+    .replace(/\d{1,2}시(\s*\d{1,2}분)?/g, '')
+    .replace(/(내일|모레|오늘)/g, '')
+    .replace(/에서/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  
+  if (title.length < 5) {
+    title = text.slice(0, 50);
+  }
+  
+  // Google Calendar URL 생성
+  let calendarUrl: string | null = null;
+  if (startDate && isValid(startDate)) {
+    const endDate = new Date(startDate);
+    endDate.setHours(endDate.getHours() + 1); // 기본 1시간 이벤트
+    
+    // Google Calendar 형식: YYYYMMDDTHHmmss
+    const formatGoogleDate = (date: Date) => {
+      return format(date, "yyyyMMdd'T'HHmmss");
+    };
+    
+    const params = new URLSearchParams({
+      action: 'TEMPLATE',
+      text: title,
+      dates: `${formatGoogleDate(startDate)}/${formatGoogleDate(endDate)}`,
+      details: `음성 메모에서 생성됨: ${text}`,
+      ...(location && { location })
+    });
+    
+    calendarUrl = `https://www.google.com/calendar/render?${params.toString()}`;
+    
+    return { title, startDate, endDate, location, calendarUrl };
+  }
+  
+  return { title, startDate: null, endDate: null, location, calendarUrl: null };
+}
 
 export function ProcessingResults({ result }: ProcessingResultsProps) {
   const [showFullText, setShowFullText] = useState(false);
@@ -296,9 +453,90 @@ export function ProcessingResults({ result }: ProcessingResultsProps) {
         <CardContent>
           <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
             <div className="prose prose-sm max-w-none">
-              <div className="whitespace-pre-wrap text-gray-800 leading-relaxed">
-                {result.summary}
-              </div>
+              {/* 요약이 | 로 구분된 항목 리스트인 경우 개별 표시 */}
+              {result.summary.includes('|') ? (
+                <div className="space-y-3">
+                  {result.summary.split('|').map((item, index) => {
+                    const trimmedItem = item.trim();
+                    if (!trimmedItem) return null;
+                    
+                    // 약속 일정 카테고리인 경우 캘린더 버튼 표시
+                    if (result.category === '약속 일정') {
+                      const calendarInfo = parseAppointmentForCalendar(trimmedItem);
+                      return (
+                        <div key={index} className="flex items-start justify-between p-3 bg-white rounded-lg border border-purple-200">
+                          <div className="flex-1">
+                            <span className="text-gray-800">{trimmedItem}</span>
+                            {calendarInfo.startDate && (
+                              <div className="mt-1 text-xs text-purple-600">
+                                📅 {format(calendarInfo.startDate, 'yyyy년 M월 d일 HH:mm', { locale: ko })}
+                                {calendarInfo.location && ` • 📍 ${calendarInfo.location}`}
+                              </div>
+                            )}
+                          </div>
+                          {calendarInfo.calendarUrl && (
+                            <Button
+                              onClick={() => window.open(calendarInfo.calendarUrl!, '_blank')}
+                              variant="outline"
+                              size="sm"
+                              className="ml-3 bg-purple-50 border-purple-300 text-purple-700 hover:bg-purple-100"
+                            >
+                              <Calendar className="h-4 w-4 mr-1" />
+                              캘린더 추가
+                              <ExternalLink className="h-3 w-3 ml-1" />
+                            </Button>
+                          )}
+                        </div>
+                      );
+                    }
+                    
+                    return (
+                      <div key={index} className="flex items-center p-2 bg-white rounded-lg border border-gray-200">
+                        <span className="text-gray-500 mr-2">•</span>
+                        <span className="text-gray-800">{trimmedItem}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div>
+                  {/* 약속 일정 단일 항목인 경우 */}
+                  {result.category === '약속 일정' ? (
+                    (() => {
+                      const calendarInfo = parseAppointmentForCalendar(result.summary);
+                      return (
+                        <div className="space-y-3">
+                          <div className="whitespace-pre-wrap text-gray-800 leading-relaxed">
+                            {result.summary}
+                          </div>
+                          {calendarInfo.startDate && (
+                            <div className="text-xs text-purple-600">
+                              📅 {format(calendarInfo.startDate, 'yyyy년 M월 d일 HH:mm', { locale: ko })}
+                              {calendarInfo.location && ` • 📍 ${calendarInfo.location}`}
+                            </div>
+                          )}
+                          {calendarInfo.calendarUrl && (
+                            <Button
+                              onClick={() => window.open(calendarInfo.calendarUrl!, '_blank')}
+                              variant="outline"
+                              size="sm"
+                              className="bg-purple-50 border-purple-300 text-purple-700 hover:bg-purple-100"
+                            >
+                              <Calendar className="h-4 w-4 mr-1" />
+                              Google 캘린더에 추가
+                              <ExternalLink className="h-3 w-3 ml-1" />
+                            </Button>
+                          )}
+                        </div>
+                      );
+                    })()
+                  ) : (
+                    <div className="whitespace-pre-wrap text-gray-800 leading-relaxed">
+                      {result.summary}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </CardContent>

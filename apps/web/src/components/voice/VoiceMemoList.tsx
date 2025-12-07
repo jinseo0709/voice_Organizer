@@ -9,11 +9,122 @@ import {
   Calendar,
   Clock,
   FileAudio,
-  Tag
+  Tag,
+  ExternalLink
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { format, isValid } from 'date-fns';
+import { ko } from 'date-fns/locale';
 import type { VoiceMemo } from '@voice-organizer/shared';
+
+// 🗓️ 약속 일정에서 날짜/시간 파싱 및 Google Calendar URL 생성
+function parseAppointmentForCalendar(text: string): { 
+  title: string; 
+  startDate: Date | null; 
+  location: string;
+  calendarUrl: string | null;
+} {
+  const now = new Date();
+  let startDate: Date | null = null;
+  let location = '';
+  let title = text;
+  
+  // 날짜 패턴 매칭
+  const datePatterns = [
+    /(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일/,
+    /(\d{1,2})월\s*(\d{1,2})일/,
+    /(내일|모레|오늘)/
+  ];
+  
+  // 시간 패턴 매칭
+  const timePatterns = [
+    /(오전|오후)\s*(\d{1,2})시(?:\s*(\d{1,2})분)?/,
+    /(\d{1,2}):(\d{2})/,
+    /(\d{1,2})시(?:\s*(\d{1,2})분)?/
+  ];
+  
+  // 장소 패턴 매칭
+  const locationPatterns = [
+    /에서\s+(.+?)(?:에서|와|과|랑|$)/,
+    /(\S+(?:역|카페|식당|공원|센터|빌딩))\s*(?:에서|에)/
+  ];
+  
+  // 날짜 추출
+  for (const pattern of datePatterns) {
+    const match = text.match(pattern);
+    if (match) {
+      if (match[0].includes('년')) {
+        startDate = new Date(parseInt(match[1]), parseInt(match[2]) - 1, parseInt(match[3]));
+      } else if (match[0] === '내일') {
+        startDate = new Date(now);
+        startDate.setDate(startDate.getDate() + 1);
+      } else if (match[0] === '모레') {
+        startDate = new Date(now);
+        startDate.setDate(startDate.getDate() + 2);
+      } else if (match[0] === '오늘') {
+        startDate = new Date(now);
+      } else if (match[0].includes('월')) {
+        startDate = new Date(now.getFullYear(), parseInt(match[1]) - 1, parseInt(match[2]));
+        if (startDate < now) startDate.setFullYear(startDate.getFullYear() + 1);
+      }
+      break;
+    }
+  }
+  
+  // 시간 추출
+  if (startDate) {
+    for (const pattern of timePatterns) {
+      const match = text.match(pattern);
+      if (match) {
+        let hours = 0, minutes = 0;
+        if (match[0].includes('오전') || match[0].includes('오후')) {
+          hours = parseInt(match[2]);
+          minutes = match[3] ? parseInt(match[3]) : 0;
+          if (match[1] === '오후' && hours !== 12) hours += 12;
+        } else if (match[0].includes(':')) {
+          hours = parseInt(match[1]);
+          minutes = parseInt(match[2]);
+        } else {
+          hours = parseInt(match[1]);
+          minutes = match[2] ? parseInt(match[2]) : 0;
+        }
+        startDate.setHours(hours, minutes, 0, 0);
+        break;
+      }
+    }
+  }
+  
+  // 장소 추출
+  for (const pattern of locationPatterns) {
+    const match = text.match(pattern);
+    if (match && match[1]) {
+      location = match[1].trim();
+      break;
+    }
+  }
+  
+  // Google Calendar URL 생성
+  let calendarUrl: string | null = null;
+  if (startDate && isValid(startDate)) {
+    const endDate = new Date(startDate);
+    endDate.setHours(endDate.getHours() + 1);
+    
+    const formatGoogleDate = (date: Date) => format(date, "yyyyMMdd'T'HHmmss");
+    
+    const params = new URLSearchParams({
+      action: 'TEMPLATE',
+      text: title.slice(0, 50),
+      dates: `${formatGoogleDate(startDate)}/${formatGoogleDate(endDate)}`,
+      details: `음성 메모: ${text}`,
+      ...(location && { location })
+    });
+    
+    calendarUrl = `https://www.google.com/calendar/render?${params.toString()}`;
+  }
+  
+  return { title, startDate, location, calendarUrl };
+}
 
 interface VoiceMemoListProps {
   memos: VoiceMemo[];
@@ -282,6 +393,35 @@ export function VoiceMemoList({
                       <p className="text-xs sm:text-sm text-gray-600 line-clamp-2 leading-relaxed">
                         {memo.summary || memo.transcription}
                       </p>
+                      
+                      {/* 약속 일정 카테고리인 경우 캘린더 버튼 표시 */}
+                      {memo.category === '약속 일정' && (
+                        (() => {
+                          const calendarInfo = parseAppointmentForCalendar(memo.summary || memo.transcription || '');
+                          return calendarInfo.calendarUrl ? (
+                            <div className="mt-2 flex items-center gap-2">
+                              {calendarInfo.startDate && (
+                                <span className="text-xs text-purple-600">
+                                  📅 {format(calendarInfo.startDate, 'M월 d일 HH:mm', { locale: ko })}
+                                </span>
+                              )}
+                              <Button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  window.open(calendarInfo.calendarUrl!, '_blank');
+                                }}
+                                variant="outline"
+                                size="sm"
+                                className="h-6 px-2 text-xs bg-purple-50 border-purple-300 text-purple-700 hover:bg-purple-100"
+                              >
+                                <Calendar size={12} className="mr-1" />
+                                캘린더 추가
+                                <ExternalLink size={10} className="ml-1" />
+                              </Button>
+                            </div>
+                          ) : null;
+                        })()
+                      )}
                     </div>
                   )}
                 </div>
