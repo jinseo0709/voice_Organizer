@@ -20,7 +20,12 @@ import {
   Copy,
   CheckCircle,
   Calendar,
-  ExternalLink
+  ExternalLink,
+  ShoppingCart,
+  Check,
+  Square,
+  Lightbulb,
+  Sparkles
 } from 'lucide-react';
 import { formatDistanceToNow, format, parse, isValid } from 'date-fns';
 import { ko } from 'date-fns/locale';
@@ -48,6 +53,250 @@ const CATEGORY_COLORS = {
   '아이디어': 'bg-yellow-100 text-yellow-800 border-yellow-200',
   '기타': 'bg-gray-100 text-gray-800 border-gray-200'
 };
+
+// 📌 카테고리별 타입 정의
+interface CategoryData {
+  category: string;
+  summary_list: string[];
+  keywords?: string[];
+  ai_supplement?: string;  // 아이디어 카테고리 전용
+}
+
+// 📌 카테고리별 맞춤형 UI 컴포넌트
+function CategorySpecificUI({ allCategories }: { allCategories: CategoryData[] }) {
+  // 각 카테고리별 로컬 상태 관리
+  const [todoChecked, setTodoChecked] = useState<Set<string>>(new Set());
+  const [cartItems, setCartItems] = useState<Set<string>>(new Set());
+
+  // 투두리스트 체크박스 토글
+  const toggleTodo = (item: string) => {
+    setTodoChecked(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(item)) {
+        newSet.delete(item);
+      } else {
+        newSet.add(item);
+      }
+      return newSet;
+    });
+  };
+
+  // 쇼핑리스트 장바구니 토글
+  const toggleCart = (item: string) => {
+    setCartItems(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(item)) {
+        newSet.delete(item);
+      } else {
+        newSet.add(item);
+      }
+      return newSet;
+    });
+  };
+
+  return (
+    <div className="space-y-6">
+      {allCategories.map((cat, catIndex) => {
+        const categoryIcon = CATEGORY_ICONS[cat.category as keyof typeof CATEGORY_ICONS] || '📝';
+        const categoryColorClass = CATEGORY_COLORS[cat.category as keyof typeof CATEGORY_COLORS] || CATEGORY_COLORS['기타'];
+        
+        return (
+          <div key={catIndex} className={`rounded-lg border-2 overflow-hidden ${
+            cat.category === '투두리스트' ? 'border-blue-200 bg-blue-50' :
+            cat.category === '쇼핑리스트' ? 'border-green-200 bg-green-50' :
+            cat.category === '약속 일정' ? 'border-purple-200 bg-purple-50' :
+            cat.category === '학교 수업 과제 일정' ? 'border-orange-200 bg-orange-50' :
+            cat.category === '아이디어' ? 'border-yellow-200 bg-yellow-50' :
+            'border-gray-200 bg-gray-50'
+          }`}>
+            {/* 카테고리 헤더 */}
+            <div className={`px-4 py-2 font-semibold flex items-center gap-2 ${
+              cat.category === '투두리스트' ? 'bg-blue-100 text-blue-800' :
+              cat.category === '쇼핑리스트' ? 'bg-green-100 text-green-800' :
+              cat.category === '약속 일정' ? 'bg-purple-100 text-purple-800' :
+              cat.category === '학교 수업 과제 일정' ? 'bg-orange-100 text-orange-800' :
+              cat.category === '아이디어' ? 'bg-yellow-100 text-yellow-800' :
+              'bg-gray-100 text-gray-800'
+            }`}>
+              <span className="text-lg">{categoryIcon}</span>
+              <span>{cat.category}</span>
+              <span className="ml-auto text-sm font-normal opacity-70">
+                {cat.summary_list?.length || 0}개 항목
+              </span>
+            </div>
+
+            {/* 카테고리별 맞춤 UI */}
+            <div className="p-4 space-y-2">
+              {/* ✅ 투두리스트: 체크박스 형식 */}
+              {cat.category === '투두리스트' && cat.summary_list?.map((item, idx) => (
+                <div 
+                  key={idx}
+                  onClick={() => toggleTodo(item)}
+                  className={`flex items-center gap-3 p-3 bg-white rounded-lg border cursor-pointer transition-all ${
+                    todoChecked.has(item) 
+                      ? 'border-blue-400 bg-blue-50' 
+                      : 'border-gray-200 hover:border-blue-300'
+                  }`}
+                >
+                  <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                    todoChecked.has(item) 
+                      ? 'bg-blue-500 border-blue-500 text-white' 
+                      : 'border-gray-300'
+                  }`}>
+                    {todoChecked.has(item) && <Check className="w-3 h-3" />}
+                  </div>
+                  <span className={`flex-1 ${todoChecked.has(item) ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+                    {item}
+                  </span>
+                </div>
+              ))}
+
+              {/* 🛒 쇼핑리스트: 장바구니 담기 형식 */}
+              {cat.category === '쇼핑리스트' && cat.summary_list?.map((item, idx) => (
+                <div 
+                  key={idx}
+                  className={`flex items-center justify-between p-3 bg-white rounded-lg border transition-all ${
+                    cartItems.has(item)
+                      ? 'border-green-400 bg-green-50'
+                      : 'border-gray-200'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <ShoppingCart className={`w-4 h-4 ${cartItems.has(item) ? 'text-green-600' : 'text-gray-400'}`} />
+                    <span className={cartItems.has(item) ? 'line-through text-gray-400' : 'text-gray-800'}>
+                      {item}
+                    </span>
+                  </div>
+                  <Button
+                    onClick={() => toggleCart(item)}
+                    variant={cartItems.has(item) ? 'outline' : 'default'}
+                    size="sm"
+                    className={cartItems.has(item) 
+                      ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' 
+                      : 'bg-green-500 hover:bg-green-600 text-white'
+                    }
+                  >
+                    {cartItems.has(item) ? (
+                      <>
+                        <Check className="w-4 h-4 mr-1" />
+                        담김
+                      </>
+                    ) : (
+                      <>
+                        <ShoppingCart className="w-4 h-4 mr-1" />
+                        담기
+                      </>
+                    )}
+                  </Button>
+                </div>
+              ))}
+
+              {/* 📅 약속 일정: 캘린더 등록 형식 */}
+              {cat.category === '약속 일정' && cat.summary_list?.map((item, idx) => {
+                const calendarInfo = parseAppointmentForCalendar(item);
+                return (
+                  <div key={idx} className="flex items-start justify-between p-3 bg-white rounded-lg border border-purple-200">
+                    <div className="flex-1">
+                      <span className="text-gray-800">{item}</span>
+                      {calendarInfo.startDate && (
+                        <div className="mt-1 text-xs text-purple-600">
+                          📅 {format(calendarInfo.startDate, 'yyyy년 M월 d일 HH:mm', { locale: ko })}
+                          {calendarInfo.location && ` • 📍 ${calendarInfo.location}`}
+                        </div>
+                      )}
+                    </div>
+                    {calendarInfo.calendarUrl && (
+                      <Button
+                        onClick={() => window.open(calendarInfo.calendarUrl!, '_blank')}
+                        variant="outline"
+                        size="sm"
+                        className="ml-3 bg-purple-50 border-purple-300 text-purple-700 hover:bg-purple-100"
+                      >
+                        <Calendar className="h-4 w-4 mr-1" />
+                        캘린더 추가
+                        <ExternalLink className="h-3 w-3 ml-1" />
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* 🎓 학교 수업 과제 일정: 캘린더 등록 형식 */}
+              {cat.category === '학교 수업 과제 일정' && cat.summary_list?.map((item, idx) => {
+                const calendarInfo = parseAppointmentForCalendar(item);
+                return (
+                  <div key={idx} className="flex items-start justify-between p-3 bg-white rounded-lg border border-orange-200">
+                    <div className="flex-1">
+                      <span className="text-gray-800 font-medium">{item}</span>
+                      {calendarInfo.startDate && (
+                        <div className="mt-1 text-xs text-orange-600">
+                          📚 마감: {format(calendarInfo.startDate, 'yyyy년 M월 d일 HH:mm', { locale: ko })}
+                        </div>
+                      )}
+                    </div>
+                    {calendarInfo.calendarUrl && (
+                      <Button
+                        onClick={() => window.open(calendarInfo.calendarUrl!, '_blank')}
+                        variant="outline"
+                        size="sm"
+                        className="ml-3 bg-orange-50 border-orange-300 text-orange-700 hover:bg-orange-100"
+                      >
+                        <Calendar className="h-4 w-4 mr-1" />
+                        캘린더 추가
+                        <ExternalLink className="h-3 w-3 ml-1" />
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* 💡 아이디어: 구조화된 텍스트 + AI 보충 의견 */}
+              {cat.category === '아이디어' && (
+                <div className="space-y-4">
+                  {/* 아이디어 항목들 */}
+                  {cat.summary_list?.map((item, idx) => (
+                    <div key={idx} className="p-4 bg-white rounded-lg border border-yellow-200">
+                      <div className="flex items-start gap-2">
+                        <Lightbulb className="w-5 h-5 text-yellow-500 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1">
+                          <p className="text-gray-800 whitespace-pre-wrap">{item}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {/* AI 보충 의견 (ai_supplement) */}
+                  {cat.ai_supplement && (
+                    <div className="p-4 bg-gradient-to-r from-yellow-50 to-amber-50 rounded-lg border-2 border-yellow-300">
+                      <div className="flex items-start gap-2">
+                        <Sparkles className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1">
+                          <p className="text-xs font-semibold text-amber-600 mb-2">
+                            ✨ Gemini의 보충 의견
+                          </p>
+                          <p className="text-gray-700 leading-relaxed">
+                            {cat.ai_supplement}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 📝 기타 카테고리 */}
+              {cat.category === '기타' && cat.summary_list?.map((item, idx) => (
+                <div key={idx} className="p-3 bg-white rounded-lg border border-gray-200">
+                  <span className="text-gray-800">{item}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 // 🗓️ 약속 일정에서 날짜/시간 파싱 및 Google Calendar URL 생성
 function parseAppointmentForCalendar(text: string): { 
@@ -432,7 +681,7 @@ export function ProcessingResults({ result }: ProcessingResultsProps) {
         </CardContent>
       </Card>
 
-      {/* 카테고리별 요약 */}
+      {/* 카테고리별 맞춤형 요약 */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -451,20 +700,26 @@ export function ProcessingResults({ result }: ProcessingResultsProps) {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-            <div className="prose prose-sm max-w-none">
-              {/* 요약이 | 로 구분된 항목 리스트인 경우 개별 표시 */}
-              {result.summary.includes('|') ? (
-                <div className="space-y-3">
-                  {result.summary.split('|').map((item, index) => {
-                    const trimmedItem = item.trim();
-                    if (!trimmedItem) return null;
-                    
-                    // 약속 일정 카테고리인 경우 캘린더 버튼 표시
-                    if (result.category === '약속 일정') {
+          {/* 📌 카테고리별 맞춤 UI 렌더링 */}
+          {result.allCategories && result.allCategories.length > 0 ? (
+            <CategorySpecificUI allCategories={result.allCategories} />
+          ) : (
+            // fallback: 기존 요약 표시
+            <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+              <div className="prose prose-sm max-w-none">
+                {/* 요약이 | 로 구분된 항목 리스트인 경우 개별 표시 */}
+                {result.summary.includes('|') ? (
+                  <div className="space-y-3">
+                    {result.summary.split('|').map((item, index) => {
+                      const trimmedItem = item.trim();
+                      if (!trimmedItem) return null;
+                      
+                      // 모든 항목에서 날짜/시간 파싱 시도 (카테고리 무관)
                       const calendarInfo = parseAppointmentForCalendar(trimmedItem);
+                      const hasCalendarInfo = calendarInfo.calendarUrl !== null;
+                      
                       return (
-                        <div key={index} className="flex items-start justify-between p-3 bg-white rounded-lg border border-purple-200">
+                        <div key={index} className={`flex items-start justify-between p-3 bg-white rounded-lg border ${hasCalendarInfo ? 'border-purple-200' : 'border-gray-200'}`}>
                           <div className="flex-1">
                             <span className="text-gray-800">{trimmedItem}</span>
                             {calendarInfo.startDate && (
@@ -474,7 +729,7 @@ export function ProcessingResults({ result }: ProcessingResultsProps) {
                               </div>
                             )}
                           </div>
-                          {calendarInfo.calendarUrl && (
+                          {hasCalendarInfo && (
                             <Button
                               onClick={() => window.open(calendarInfo.calendarUrl!, '_blank')}
                               variant="outline"
@@ -488,57 +743,17 @@ export function ProcessingResults({ result }: ProcessingResultsProps) {
                           )}
                         </div>
                       );
-                    }
-                    
-                    return (
-                      <div key={index} className="flex items-center p-2 bg-white rounded-lg border border-gray-200">
-                        <span className="text-gray-500 mr-2">•</span>
-                        <span className="text-gray-800">{trimmedItem}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div>
-                  {/* 약속 일정 단일 항목인 경우 */}
-                  {result.category === '약속 일정' ? (
-                    (() => {
-                      const calendarInfo = parseAppointmentForCalendar(result.summary);
-                      return (
-                        <div className="space-y-3">
-                          <div className="whitespace-pre-wrap text-gray-800 leading-relaxed">
-                            {result.summary}
-                          </div>
-                          {calendarInfo.startDate && (
-                            <div className="text-xs text-purple-600">
-                              📅 {format(calendarInfo.startDate, 'yyyy년 M월 d일 HH:mm', { locale: ko })}
-                              {calendarInfo.location && ` • 📍 ${calendarInfo.location}`}
-                            </div>
-                          )}
-                          {calendarInfo.calendarUrl && (
-                            <Button
-                              onClick={() => window.open(calendarInfo.calendarUrl!, '_blank')}
-                              variant="outline"
-                              size="sm"
-                              className="bg-purple-50 border-purple-300 text-purple-700 hover:bg-purple-100"
-                            >
-                              <Calendar className="h-4 w-4 mr-1" />
-                              Google 캘린더에 추가
-                              <ExternalLink className="h-3 w-3 ml-1" />
-                            </Button>
-                          )}
-                        </div>
-                      );
-                    })()
-                  ) : (
-                    <div className="whitespace-pre-wrap text-gray-800 leading-relaxed">
-                      {result.summary}
-                    </div>
-                  )}
-                </div>
-              )}
+                    })}
+                  </div>
+                ) : (
+                  // 단일 항목
+                  <div className="whitespace-pre-wrap text-gray-800 leading-relaxed">
+                    {result.summary}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 

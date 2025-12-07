@@ -28,9 +28,9 @@ interface ProgressProps {
 
 function Progress({ value, className = '' }: ProgressProps) {
   return (
-    <div className={`w-full bg-gray-200 rounded-full h-2.5 ${className}`}>
+    <div className={`w-full bg-gray-100 rounded-full h-2.5 ${className}`}>
       <div 
-        className="bg-blue-600 h-2.5 rounded-full transition-all duration-300" 
+        className="bg-gradient-to-r from-teal-400 to-teal-500 h-2.5 rounded-full transition-all duration-300" 
         style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
       />
     </div>
@@ -197,120 +197,187 @@ export function AudioFileUpload({
   };
 
   return (
-    <Card className="w-full max-w-2xl mx-auto">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <FileAudio className="h-5 w-5" />
-          음성 파일 업로드
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* 업로드 영역 */}
-        <div
-          className={`border-2 border-dashed rounded-lg p-8 text-center transition-all ${
-            dragActive
-              ? 'border-blue-500 bg-blue-50'
-              : uploadState.status === 'error'
-              ? 'border-red-300 bg-red-50'
-              : uploadState.status === 'completed'
-              ? 'border-green-300 bg-green-50'
-              : 'border-gray-300 hover:border-gray-400'
-          }`}
-          onDragEnter={handleDrag}
-          onDragLeave={handleDrag}
-          onDragOver={handleDrag}
-          onDrop={handleDrop}
-        >
+    <div className="w-full space-y-4">
+      {/* 업로드 영역 */}
+      <div
+        className={`relative border-2 border-dashed rounded-2xl p-8 text-center transition-all duration-500 cursor-pointer group ${
+          dragActive
+            ? 'border-teal-400 bg-teal-50/80 scale-[1.02] shadow-lg shadow-teal-100'
+            : uploadState.status === 'error'
+            ? 'border-red-200 bg-red-50/30'
+            : uploadState.status === 'completed'
+            ? 'border-teal-300 bg-teal-50/30'
+            : 'border-gray-200 hover:border-teal-300 hover:bg-teal-50/20 bg-white/80'
+        }`}
+        onDragEnter={handleDrag}
+        onDragLeave={handleDrag}
+        onDragOver={handleDrag}
+        onDrop={handleDrop}
+        onClick={uploadState.status === 'idle' ? handleButtonClick : undefined}
+      >
+        {/* 배경 파형 애니메이션 */}
+        <div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
+          <div className="absolute inset-0 flex items-center justify-center gap-[3px] opacity-[0.15]">
+            {[...Array(40)].map((_, i) => (
+              <div
+                key={i}
+                className="w-1 bg-teal-400 rounded-full"
+                style={{
+                  height: `${20 + Math.sin(i * 0.3) * 15 + Math.random() * 10}%`,
+                  animation: `wave-pulse-smooth-${(i % 3) + 1} ${2 + (i % 5) * 0.3}s ease-in-out infinite`,
+                  animationDelay: `${i * 0.05}s`
+                }}
+              />
+            ))}
+          </div>
+          <div className={`absolute -top-24 -right-24 w-48 h-48 rounded-full transition-all duration-700 ${
+            dragActive ? 'bg-teal-200/40 scale-150' : 'bg-teal-100/20'
+          }`} />
+          <div className={`absolute -bottom-16 -left-16 w-32 h-32 rounded-full transition-all duration-700 ${
+            dragActive ? 'bg-teal-200/40 scale-150' : 'bg-teal-50/30'
+          }`} />
+        </div>
+
+        <div className="relative z-10">
           {uploadState.status === 'idle' && (
-            <>
-              <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                음성 파일을 여기에 드롭하거나 클릭해서 선택하세요
-              </h3>
-              <p className="text-sm text-gray-500 mb-4">
-                지원 형식: MP3, WAV, M4A, MP4, AAC, WebM, OGG<br />
-                최대 크기: {maxFileSize}MB
-              </p>
-              <Button onClick={handleButtonClick} className="mt-2">
+            <div className="space-y-4">
+              <div className={`mx-auto w-20 h-20 rounded-2xl bg-gradient-to-br from-teal-400 to-teal-500 flex items-center justify-center transform transition-all duration-500 group-hover:scale-110 group-hover:rotate-3 shadow-lg shadow-teal-200/50 ${
+                dragActive ? 'scale-125 rotate-6 shadow-teal-300/60' : ''
+              }`}>
+                <Upload className="h-10 w-10 text-white stroke-[1.5]" />
+              </div>
+              <div>
+                <h3 className="text-xl font-medium text-gray-800 mb-2">
+                  음성 파일 업로드
+                </h3>
+                <p className="text-gray-500 font-light mb-1">
+                  파일을 드래그하거나 클릭해서 선택하세요
+                </p>
+                <p className="text-sm text-gray-400 font-light">
+                  MP3, WAV, M4A, AAC, WebM, OGG • 최대 {maxFileSize}MB
+                </p>
+              </div>
+              <Button 
+                onClick={(e) => { e.stopPropagation(); handleButtonClick(); }}
+                className="mt-2 bg-gradient-to-r from-teal-400 to-teal-500 hover:from-teal-500 hover:to-teal-600 text-white px-8 py-2.5 rounded-xl shadow-md shadow-teal-200/50 hover:shadow-lg hover:shadow-teal-300/50 transform hover:scale-105 transition-all duration-300"
+              >
+                <FileAudio className="h-4 w-4 mr-2 stroke-[1.5]" />
                 파일 선택
               </Button>
-            </>
+            </div>
           )}
 
           {uploadState.status === 'uploading' && (
-            <>
-              <Loader2 className="mx-auto h-12 w-12 text-blue-500 mb-4 animate-spin" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                {uploadState.fileName} 업로드 중...
-              </h3>
-              <Progress value={uploadState.progress} className="w-full mb-2" />
-              <p className="text-sm text-gray-500">
-                {uploadState.progress}% 완료
-              </p>
-            </>
+            <div className="space-y-4">
+              <div className="mx-auto w-20 h-20 rounded-2xl bg-teal-50 flex items-center justify-center">
+                <Loader2 className="h-10 w-10 text-teal-500 stroke-[1.5] animate-spin" />
+              </div>
+              <div>
+                <h3 className="text-xl font-medium text-gray-800 mb-2">
+                  업로드 중...
+                </h3>
+                <p className="text-sm text-gray-400 font-light mb-4 truncate max-w-xs mx-auto">
+                  {uploadState.fileName}
+                </p>
+              </div>
+              <div className="max-w-xs mx-auto">
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-gray-400 font-light">진행률</span>
+                  <span className="font-medium text-teal-600">{uploadState.progress}%</span>
+                </div>
+                <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-teal-400 to-teal-500 rounded-full transition-all duration-500 ease-out"
+                    style={{ width: `${uploadState.progress}%` }}
+                  />
+                </div>
+              </div>
+            </div>
           )}
 
           {uploadState.status === 'completed' && (
-            <>
-              <CheckCircle2 className="mx-auto h-12 w-12 text-green-500 mb-4" />
-              <h3 className="text-lg font-medium text-green-900 mb-2">
-                업로드 완료!
-              </h3>
-              <p className="text-sm text-green-600">
-                {uploadState.fileName}
-              </p>
+            <div className="space-y-4">
+              <div className="mx-auto w-20 h-20 rounded-2xl bg-teal-50 flex items-center justify-center animate-bounce-once">
+                <CheckCircle2 className="h-10 w-10 text-teal-500 stroke-[1.5]" />
+              </div>
+              <div>
+                <h3 className="text-xl font-medium text-teal-700 mb-2">
+                  업로드 완료!
+                </h3>
+                <p className="text-sm text-teal-600 font-light truncate max-w-xs mx-auto">
+                  {uploadState.fileName}
+                </p>
+              </div>
               <Button 
-                onClick={handleRetry} 
+                onClick={(e) => { e.stopPropagation(); handleRetry(); }}
                 variant="outline" 
-                className="mt-4"
+                className="mt-2 rounded-xl border-teal-200 text-teal-600 hover:bg-teal-50 transition-all duration-200"
               >
                 다른 파일 업로드
               </Button>
-            </>
+            </div>
           )}
 
           {uploadState.status === 'error' && (
-            <>
-              <AlertCircle className="mx-auto h-12 w-12 text-red-500 mb-4" />
-              <h3 className="text-lg font-medium text-red-900 mb-2">
-                업로드 실패
-              </h3>
-              <p className="text-sm text-red-600 mb-4">
-                {uploadState.error}
-              </p>
-              <div className="flex gap-2 justify-center">
-                <Button onClick={handleRetry} variant="outline">
+            <div className="space-y-4">
+              <div className="mx-auto w-20 h-20 rounded-2xl bg-red-50 flex items-center justify-center animate-shake">
+                <AlertCircle className="h-10 w-10 text-red-400 stroke-[1.5]" />
+              </div>
+              <div>
+                <h3 className="text-xl font-medium text-red-600 mb-2">
+                  업로드 실패
+                </h3>
+                <p className="text-sm text-red-400 font-light mb-4">
+                  {uploadState.error}
+                </p>
+              </div>
+              <div className="flex gap-3 justify-center">
+                <Button 
+                  onClick={(e) => { e.stopPropagation(); handleRetry(); }}
+                  variant="outline"
+                  className="rounded-xl border-gray-200 text-gray-600 hover:bg-gray-50 transition-all duration-200"
+                >
                   다시 시도
                 </Button>
-                <Button onClick={handleButtonClick}>
-                  다른 파일 선택
+                <Button 
+                  onClick={(e) => { e.stopPropagation(); handleButtonClick(); }}
+                  className="rounded-xl bg-gradient-to-r from-teal-400 to-teal-500 hover:from-teal-500 hover:to-teal-600 text-white transition-all duration-200"
+                >
+                  다른 파일
                 </Button>
               </div>
-            </>
+            </div>
           )}
         </div>
+      </div>
 
-        {/* 숨겨진 파일 입력 */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept={allowedExtensions.join(',')}
-          onChange={handleFileSelect}
-          className="hidden"
-        />
+      {/* 숨겨진 파일 입력 */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept={allowedExtensions.join(',')}
+        onChange={handleFileSelect}
+        className="hidden"
+      />
 
-        {/* 도움말 */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h4 className="font-semibold text-blue-900 mb-2">업로드 안내</h4>
-          <ul className="text-sm text-blue-800 space-y-1">
-            <li>• 고품질의 음성 인식을 위해 조용한 환경에서 녹음된 파일을 사용하세요</li>
-            <li>• 파일 크기가 클수록 처리 시간이 오래 걸릴 수 있습니다</li>
-            <li>• 업로드된 파일은 안전하게 암호화되어 저장됩니다</li>
-            <li>• 처리가 완료되면 자동으로 텍스트 변환과 분석이 시작됩니다</li>
-          </ul>
+      {/* 도움말 - 업로드 대기 상태에서만 표시 */}
+      {uploadState.status === 'idle' && (
+        <div className="bg-gradient-to-r from-teal-50/50 to-white rounded-xl p-4 border border-teal-100/50">
+          <div className="flex items-start gap-3">
+            <div className="p-1.5 bg-teal-100/60 rounded-lg">
+              <FileAudio className="h-4 w-4 text-teal-500 stroke-[1.5]" />
+            </div>
+            <div className="text-sm">
+              <p className="font-medium text-gray-700 mb-1">💡 팁</p>
+              <p className="text-gray-500 font-light">
+                조용한 환경에서 녹음된 파일이 더 정확하게 인식됩니다. 
+                업로드 후 AI가 자동으로 텍스트 변환과 카테고리 분류를 수행합니다.
+              </p>
+            </div>
+          </div>
         </div>
-      </CardContent>
-    </Card>
+      )}
+    </div>
   );
 }
 

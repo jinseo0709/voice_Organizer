@@ -3,9 +3,6 @@
 import React, { useEffect, useState } from 'react';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import VoiceOrganizerApp from '@/components/VoiceOrganizerApp';
-import AuthComponent from '@/components/AuthComponent';
-import ServiceTestComponent from '@/components/ServiceTestComponent';
-import FileUploadComponent from '@/components/FileUploadComponent';
 // Firebase 초기화
 import { firebase } from '@voice-organizer/firebase';
 
@@ -87,34 +84,8 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Authentication Section */}
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-center text-gray-900 mb-2">
-            Voice Organizer
-          </h1>
-          <p className="text-center text-gray-600 mb-8">
-            실제 Firebase/GCP 서비스 연동 테스트
-          </p>
-          <AuthComponent />
-        </div>
-
-        {/* Service Integration Tests */}
-        <div className="mb-8">
-          <ServiceTestComponent />
-        </div>
-
-        {/* File Upload Test */}
-        <div className="mb-8">
-          <FileUploadComponent />
-        </div>
-
-        {/* Voice Organizer App */}
-        <ProtectedRoute>
-          <VoiceOrganizerApp />
-        </ProtectedRoute>
-      </div>
-    </div>
+    <ProtectedRoute>
+      <VoiceOrganizerApp />
+    </ProtectedRoute>
   );
 }

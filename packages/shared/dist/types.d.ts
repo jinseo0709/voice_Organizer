@@ -1,3 +1,9 @@
+export interface CategorySummary {
+    category: string;
+    summary?: string;
+    summary_list?: string[];
+    ai_supplement?: string;
+}
 export interface VoiceMemo {
     id: string;
     userId: string;
@@ -9,6 +15,7 @@ export interface VoiceMemo {
     summary?: string;
     tags?: string[];
     category?: string;
+    allCategories?: CategorySummary[];
     createdAt: Date;
     updatedAt: Date;
 }

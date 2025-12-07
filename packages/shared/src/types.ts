@@ -1,3 +1,11 @@
+// 카테고리별 요약 항목
+export interface CategorySummary {
+  category: string;
+  summary?: string;
+  summary_list?: string[];
+  ai_supplement?: string;
+}
+
 export interface VoiceMemo {
   id: string;
   userId: string;
@@ -9,6 +17,7 @@ export interface VoiceMemo {
   summary?: string;
   tags?: string[];
   category?: string;
+  allCategories?: CategorySummary[]; // 모든 카테고리별 요약
   createdAt: Date;
   updatedAt: Date;
 }

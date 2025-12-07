@@ -1,2 +1,2 @@
 export { VoiceRecorder } from './VoiceRecorder';
-export { VoiceMemoList } from './VoiceMemoList';
+export { VoiceMemoList, type CheckedItemsState, type CartItemsState } from './VoiceMemoList';

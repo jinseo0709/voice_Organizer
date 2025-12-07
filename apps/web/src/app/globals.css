@@ -1,58 +1,84 @@
+/* Pretendard 폰트 import - tailwindcss 전에 위치 */
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
+
 @import "tailwindcss";
 
 :root {
-  --background: 0 0% 100%;
-  --foreground: 222.2 84% 4.9%;
+  /* 미니멀 & 세련된 색상 팔레트 */
+  --background: 0 0% 99%;           /* 순백색에 가까운 아이보리 */
+  --foreground: 220 15% 25%;        /* 짙은 회색 (부드러운 검정) */
   --card: 0 0% 100%;
-  --card-foreground: 222.2 84% 4.9%;
+  --card-foreground: 220 15% 25%;
   --popover: 0 0% 100%;
-  --popover-foreground: 222.2 84% 4.9%;
-  --primary: 221.2 83.2% 53.3%;
-  --primary-foreground: 210 40% 98%;
-  --secondary: 210 40% 96%;
-  --secondary-foreground: 222.2 84% 4.9%;
-  --muted: 210 40% 96%;
-  --muted-foreground: 215.4 16.3% 46.9%;
-  --accent: 210 40% 96%;
-  --accent-foreground: 222.2 84% 4.9%;
-  --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 214.3 31.8% 91.4%;
-  --input: 214.3 31.8% 91.4%;
-  --ring: 221.2 83.2% 53.3%;
-  --chart-1: 12 76% 61%;
-  --chart-2: 173 58% 39%;
-  --chart-3: 197 37% 24%;
-  --chart-4: 43 74% 66%;
-  --chart-5: 27 87% 67%;
-  --radius: 0.5rem;
+  --popover-foreground: 220 15% 25%;
+  
+  /* 청록색(Teal) 계열 강조 색상 - 채도 낮춤 */
+  --primary: 175 45% 45%;           /* 차분한 청록색 */
+  --primary-foreground: 0 0% 100%;
+  
+  /* 라벤더 계열 보조 색상 */
+  --secondary: 250 30% 95%;         /* 연한 라벤더 배경 */
+  --secondary-foreground: 250 25% 35%;
+  
+  --muted: 220 15% 96%;
+  --muted-foreground: 220 10% 50%;
+  --accent: 175 35% 92%;            /* 청록 틴트 */
+  --accent-foreground: 175 45% 30%;
+  --destructive: 0 65% 55%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 220 15% 92%;
+  --input: 220 15% 92%;
+  --ring: 175 45% 45%;
+  
+  /* 차트 색상 */
+  --chart-1: 175 45% 50%;
+  --chart-2: 250 30% 55%;
+  --chart-3: 45 60% 55%;
+  --chart-4: 330 40% 55%;
+  --chart-5: 200 50% 50%;
+  
+  --radius: 0.75rem;
+  
+  /* 커스텀 색상 변수 */
+  --teal-50: 175 45% 97%;
+  --teal-100: 175 45% 92%;
+  --teal-200: 175 42% 82%;
+  --teal-300: 175 40% 65%;
+  --teal-400: 175 42% 50%;
+  --teal-500: 175 45% 45%;
+  --teal-600: 175 50% 35%;
+  
+  --lavender-50: 250 30% 97%;
+  --lavender-100: 250 30% 92%;
+  --lavender-200: 250 28% 85%;
+  --lavender-500: 250 30% 55%;
 }
 
 .dark {
-  --background: 222.2 84% 4.9%;
-  --foreground: 210 40% 98%;
-  --card: 222.2 84% 4.9%;
-  --card-foreground: 210 40% 98%;
-  --popover: 222.2 84% 4.9%;
-  --popover-foreground: 210 40% 98%;
-  --primary: 217.2 91.2% 59.8%;
-  --primary-foreground: 222.2 84% 4.9%;
-  --secondary: 217.2 32.6% 17.5%;
-  --secondary-foreground: 210 40% 98%;
-  --muted: 217.2 32.6% 17.5%;
-  --muted-foreground: 215 20.2% 65.1%;
-  --accent: 217.2 32.6% 17.5%;
-  --accent-foreground: 210 40% 98%;
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 217.2 32.6% 17.5%;
-  --input: 217.2 32.6% 17.5%;
-  --ring: 224.3 76.3% 94.1%;
-  --chart-1: 220 70% 50%;
-  --chart-2: 160 60% 45%;
-  --chart-3: 30 80% 55%;
-  --chart-4: 280 65% 60%;
-  --chart-5: 340 75% 55%;
+  --background: 220 20% 8%;
+  --foreground: 220 15% 92%;
+  --card: 220 20% 10%;
+  --card-foreground: 220 15% 92%;
+  --popover: 220 20% 10%;
+  --popover-foreground: 220 15% 92%;
+  --primary: 175 45% 50%;
+  --primary-foreground: 220 20% 8%;
+  --secondary: 220 20% 15%;
+  --secondary-foreground: 220 15% 85%;
+  --muted: 220 20% 15%;
+  --muted-foreground: 220 15% 60%;
+  --accent: 175 35% 18%;
+  --accent-foreground: 175 45% 70%;
+  --destructive: 0 60% 45%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 220 20% 18%;
+  --input: 220 20% 18%;
+  --ring: 175 45% 50%;
+  --chart-1: 175 45% 55%;
+  --chart-2: 250 30% 60%;
+  --chart-3: 45 55% 55%;
+  --chart-4: 330 40% 55%;
+  --chart-5: 200 50% 55%;
 }
 
 * {
@@ -62,13 +88,26 @@
 body {
   color: hsl(var(--foreground));
   background: hsl(var(--background));
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* 타이포그래피 시스템 */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
 }
+
+.font-light { font-weight: 300; }
+.font-regular { font-weight: 400; }
+.font-medium { font-weight: 500; }
+.font-semibold { font-weight: 600; }
+.font-bold { font-weight: 700; }
 
 /* 모바일 최적화 스타일 */
 @supports (touch-action: manipulation) {
@@ -201,6 +240,240 @@ button:focus-visible,
 
 .animate-pulse-notification {
   animation: pulse-notification 2s infinite;
+}
+
+/* ========================================
+   Voice Waveform 애니메이션 - 헤더 전체 배경용
+   ======================================== */
+@keyframes wave-float {
+  0%, 100% { transform: translateY(0) scaleY(1); }
+  50% { transform: translateY(-2px) scaleY(1.1); }
+}
+
+@keyframes wave-pulse-1 {
+  0%, 100% { transform: scaleY(0.4); opacity: 0.15; }
+  50% { transform: scaleY(1); opacity: 0.25; }
+}
+
+@keyframes wave-pulse-2 {
+  0%, 100% { transform: scaleY(0.6); opacity: 0.2; }
+  50% { transform: scaleY(0.3); opacity: 0.1; }
+}
+
+@keyframes wave-pulse-3 {
+  0%, 100% { transform: scaleY(0.3); opacity: 0.1; }
+  50% { transform: scaleY(0.8); opacity: 0.2; }
+}
+
+/* 부드러운 파형 애니메이션 (업로드 영역용) */
+@keyframes wave-pulse-smooth-1 {
+  0%, 100% { transform: scaleY(0.3); opacity: 0.6; }
+  50% { transform: scaleY(1); opacity: 1; }
+}
+
+@keyframes wave-pulse-smooth-2 {
+  0%, 100% { transform: scaleY(0.5); opacity: 0.8; }
+  50% { transform: scaleY(0.2); opacity: 0.5; }
+}
+
+@keyframes wave-pulse-smooth-3 {
+  0%, 100% { transform: scaleY(0.2); opacity: 0.5; }
+  50% { transform: scaleY(0.7); opacity: 0.9; }
+}
+
+/* 바운스 한 번 애니메이션 */
+@keyframes bounce-once {
+  0% { transform: scale(0.5); opacity: 0; }
+  50% { transform: scale(1.1); }
+  70% { transform: scale(0.95); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.animate-bounce-once {
+  animation: bounce-once 0.5s ease-out forwards;
+}
+
+/* 흔들기 애니메이션 */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-6px); }
+  80% { transform: translateX(6px); }
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+@keyframes wave-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+/* 헤더 전체를 덮는 파형 컨테이너 */
+.header-wave-bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.voice-wave-full {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 20px;
+}
+
+.wave-bar-bg {
+  width: 2px;
+  background: linear-gradient(to top, hsl(175 45% 45% / 0.3), hsl(175 45% 45% / 0.05));
+  border-radius: 1px;
+  transform-origin: bottom;
+  min-height: 8px;
+}
+
+.wave-bar-bg:nth-child(4n+1) {
+  animation: wave-pulse-1 2.5s ease-in-out infinite;
+}
+
+.wave-bar-bg:nth-child(4n+2) {
+  animation: wave-pulse-2 3s ease-in-out infinite;
+  animation-delay: 0.2s;
+}
+
+.wave-bar-bg:nth-child(4n+3) {
+  animation: wave-pulse-3 2.8s ease-in-out infinite;
+  animation-delay: 0.4s;
+}
+
+.wave-bar-bg:nth-child(4n) {
+  animation: wave-pulse-1 3.2s ease-in-out infinite;
+  animation-delay: 0.6s;
+}
+
+/* Shimmer effect overlay */
+.wave-shimmer-full {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, transparent, hsl(175 45% 45% / 0.03), transparent);
+  animation: wave-shimmer 4s ease-in-out infinite;
+}
+
+/* ========================================
+   사이드바 아이콘 미니멀 스타일 & 호버 효과
+   ======================================== */
+.sidebar-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+}
+
+.sidebar-icon-wrapper:hover {
+  transform: scale(1.05);
+}
+
+.sidebar-icon {
+  stroke-width: 1.5;
+  transition: all 0.2s ease;
+}
+
+.sidebar-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.sidebar-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent 40%, hsl(var(--primary) / 0.1) 100%);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  border-radius: inherit;
+}
+
+.sidebar-btn:hover::before {
+  opacity: 1;
+}
+
+.sidebar-btn:hover .sidebar-icon {
+  transform: scale(1.1);
+}
+
+.sidebar-btn:active {
+  transform: scale(0.98);
+}
+
+/* ========================================
+   미니멀 카드 디자인
+   ======================================== */
+.card-minimal {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  box-shadow: 0 1px 3px hsl(var(--foreground) / 0.04);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.card-minimal:hover {
+  box-shadow: 0 4px 12px hsl(var(--foreground) / 0.06);
+}
+
+/* ========================================
+   버튼 디자인 시스템
+   ======================================== */
+.btn-primary {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius);
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.btn-primary:hover {
+  background: hsl(175 50% 40%);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: hsl(var(--foreground));
+  border: 1px solid hsl(var(--border));
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius);
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+  background: hsl(var(--muted));
+  border-color: hsl(var(--primary) / 0.3);
+}
+
+/* ========================================
+   아이콘 스타일 (Line/Outline)
+   ======================================== */
+.icon-outline {
+  stroke-width: 1.5;
+  fill: none;
 }
 
 /* PWA 설치 프롬프트 스타일 */

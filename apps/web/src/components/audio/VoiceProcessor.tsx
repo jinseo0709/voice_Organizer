@@ -47,6 +47,11 @@ export interface VoiceProcessingResult {
   audioUrl: string;
   processingTime: number;
   createdAt: Date;
+  // 📅 캘린더용: 모든 카테고리별 분석 결과
+  allCategories?: Array<{
+    category: string;
+    summary_list: string[];
+  }>;
 }
 
 interface VoiceProcessorProps {
@@ -116,7 +121,9 @@ export function VoiceProcessor({ onProcessingComplete, onError }: VoiceProcessor
         sentiment: analysis.sentiment,
         keywords: analysis.keywords,
         audioUrl: uploadResult.downloadURL,
-        processingTime: Date.now() - startTime
+        processingTime: Date.now() - startTime,
+        // 📌 카테고리별 맞춤 UI를 위한 allCategories 전달
+        allCategories: analysis.allCategories || []
       });
       
       // 6단계: 완료
@@ -437,6 +444,8 @@ export function VoiceProcessor({ onProcessingComplete, onError }: VoiceProcessor
         entities: data.entities || [],
         sentiment: data.sentiment || { score: 0, magnitude: 0 },
         processingTime: data.processingTime || 0,
+        // 📅 캘린더용: 모든 카테고리별 분석 결과 저장
+        allCategories: data.allCategories || [],
       };
 
       // Firestore에 저장 (createMemo 메서드 사용)
@@ -455,7 +464,9 @@ export function VoiceProcessor({ onProcessingComplete, onError }: VoiceProcessor
         keywords: data.keywords || [],
         audioUrl: data.audioUrl || '',
         processingTime: data.processingTime || 0,
-        createdAt: new Date()
+        createdAt: new Date(),
+        // 📌 카테고리별 맞춤 UI용
+        allCategories: data.allCategories || []
       };
 
       return voiceResult;
@@ -473,7 +484,9 @@ export function VoiceProcessor({ onProcessingComplete, onError }: VoiceProcessor
         keywords: data.keywords || [],
         audioUrl: data.audioUrl || '',
         processingTime: data.processingTime || 0,
-        createdAt: new Date()
+        createdAt: new Date(),
+        // 📌 카테고리별 맞춤 UI용
+        allCategories: data.allCategories || []
       };
     }
   };
@@ -496,10 +509,16 @@ export function VoiceProcessor({ onProcessingComplete, onError }: VoiceProcessor
 
   if (!user) {
     return (
-      <Card className="w-full max-w-2xl mx-auto">
-        <CardContent className="text-center py-8">
-          <p className="text-gray-600 mb-4">음성 파일 업로드 및 처리를 위해서는 로그인이 필요합니다.</p>
-          <Button onClick={() => window.location.href = '/auth'}>
+      <Card className="w-full max-w-2xl mx-auto border border-gray-100 shadow-sm bg-white">
+        <CardContent className="text-center py-12">
+          <div className="w-16 h-16 bg-teal-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <Mic className="h-8 w-8 text-teal-600 stroke-[1.5]" />
+          </div>
+          <p className="text-gray-500 mb-6 font-light">음성 파일 업로드 및 처리를 위해서는 로그인이 필요합니다.</p>
+          <Button 
+            onClick={() => window.location.href = '/auth'}
+            className="bg-teal-600 hover:bg-teal-700 text-white px-8 py-3 rounded-xl transition-all duration-200"
+          >
             로그인하기
           </Button>
         </CardContent>
@@ -508,55 +527,100 @@ export function VoiceProcessor({ onProcessingComplete, onError }: VoiceProcessor
   }
 
   return (
-    <div className="w-full max-w-4xl mx-auto space-y-6">
-      {/* 진행 상태 표시 */}
-      <Card>
-        <CardHeader>
+    <div className="w-full space-y-6">
+      {/* 메인 카드 - 업로드 및 진행 상태 통합 */}
+      <Card className="border border-gray-100 shadow-sm bg-white overflow-hidden">
+        {/* 상단 그라데이션 바 - Teal 계열로 변경 */}
+        <div className="h-1 bg-gradient-to-r from-teal-400 via-teal-500 to-emerald-500" />
+        
+        <CardHeader className="pb-2">
           <CardTitle className="flex items-center justify-between">
-            <span>음성 파일 처리</span>
+            <div className="flex items-center gap-3">
+              <div className={`p-2.5 rounded-xl transition-all duration-300 ${
+                processing 
+                  ? 'bg-teal-50' 
+                  : result 
+                    ? 'bg-emerald-50' 
+                    : 'bg-gray-50'
+              }`}>
+                <Mic className={`h-5 w-5 stroke-[1.5] transition-colors duration-200 ${
+                  processing 
+                    ? 'text-teal-600 animate-pulse' 
+                    : result 
+                      ? 'text-emerald-600' 
+                      : 'text-gray-500'
+                }`} />
+              </div>
+              <div>
+                <span className="text-lg font-semibold text-gray-800">
+                  {result ? '처리 완료' : processing ? '처리 중...' : '새로운 음성 메모'}
+                </span>
+                <p className="text-sm text-gray-500 font-light">
+                  {result ? '아래에서 결과를 확인하세요' : processing ? 'AI가 음성을 분석하고 있습니다' : '파일을 업로드하거나 드래그하세요'}
+                </p>
+              </div>
+            </div>
             {result && (
-              <Button onClick={handleReset} variant="outline" size="sm">
-                <RotateCcw className="h-4 w-4 mr-2" />
-                새 파일 처리
+              <Button 
+                onClick={handleReset} 
+                variant="outline" 
+                size="sm"
+                className="rounded-xl hover:bg-teal-50 hover:border-teal-300 hover:text-teal-600 transition-all duration-200 border-gray-200"
+              >
+                <RotateCcw className="h-4 w-4 mr-2 stroke-[1.5]" />
+                새 파일
               </Button>
             )}
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <ProcessingStatus 
-            currentStep={currentStep}
-            processing={processing}
-            error={error}
-          />
+        
+        <CardContent className="pt-4">
+          {/* 진행 상태 (처리 중일 때만) */}
+          {(processing || (currentStep !== 'upload' && currentStep !== 'completed')) && (
+            <div className="mb-6">
+              <ProcessingStatus 
+                currentStep={currentStep}
+                processing={processing}
+                error={error}
+              />
+            </div>
+          )}
+          
+          {/* 업로드 인터페이스 */}
+          {currentStep === 'upload' && !processing && !result && (
+            <AudioFileUpload
+              onUploadComplete={handleUploadComplete}
+              onUploadError={handleError}
+              userId={user.id}
+            />
+          )}
         </CardContent>
       </Card>
 
-      {/* 업로드 인터페이스 */}
-      {currentStep === 'upload' && !processing && (
-        <AudioFileUpload
-          onUploadComplete={handleUploadComplete}
-          onUploadError={handleError}
-          userId={user.id}
-        />
-      )}
-
       {/* 처리 결과 */}
       {result && currentStep === 'completed' && (
-        <ProcessingResults result={result} />
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <ProcessingResults result={result} />
+        </div>
       )}
 
       {/* 에러 표시 */}
       {error && (
-        <Card className="border-red-200">
+        <Card className="border border-red-100 shadow-sm bg-red-50 animate-in fade-in duration-200">
           <CardContent className="pt-6">
-            <div className="flex items-center gap-2 text-red-600">
-              <span className="font-medium">오류:</span>
-              <span>{error}</span>
+            <div className="flex items-start gap-4">
+              <div className="p-2 bg-red-100 rounded-xl">
+                <Badge className="h-5 w-5 text-red-600 stroke-[1.5]" />
+              </div>
+              <div className="flex-1">
+                <h4 className="font-semibold text-red-800 mb-1">오류가 발생했습니다</h4>
+                <p className="text-sm text-red-600 font-light">{error}</p>
+              </div>
             </div>
             <Button 
               onClick={handleReset} 
               variant="outline" 
-              className="mt-4"
+              className="mt-4 w-full rounded-xl border-red-200 text-red-700 hover:bg-red-100 transition-all duration-200"
             >
               다시 시도
             </Button>
